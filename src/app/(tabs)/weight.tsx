@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { deriveFatMass, intakeGuide } from '@/analytics/body';
 import { assessPace, PACE_LABEL, stepsWeightLink, weightInsight } from '@/analytics/insights';
 import { movingAverage } from '@/analytics/stats';
 import { Card, CardTitle } from '@/components/card';
@@ -20,6 +21,20 @@ const PERIODS = [
   { label: '1年', value: 365 },
 ] as const;
 
+type Composition = 'weight' | 'bodyFat' | 'fatMass';
+
+const COMPOSITIONS: { label: string; value: Composition }[] = [
+  { label: '体重', value: 'weight' },
+  { label: '体脂肪率', value: 'bodyFat' },
+  { label: '体脂肪量', value: 'fatMass' },
+];
+
+const COMP_META: Record<Composition, { title: string; unit: string; digits: number }> = {
+  weight: { title: '体重の推移', unit: 'kg', digits: 1 },
+  bodyFat: { title: '体脂肪率の推移', unit: '%', digits: 1 },
+  fatMass: { title: '体脂肪量の推移', unit: 'kg', digits: 1 },
+};
+
 function describeCorrelation(r: number): string {
   const strength = Math.abs(r) >= 0.5 ? 'はっきりした' : Math.abs(r) >= 0.25 ? 'ゆるやかな' : '弱い';
   const direction = r < 0 ? 'よく歩いた日ほど体重が減りやすい' : 'よく歩いた日ほど体重が増えやすい';
@@ -29,36 +44,63 @@ function describeCorrelation(r: number): string {
 export default function WeightScreen() {
   const theme = useTheme();
   const [days, setDays] = useState<number>(90);
-  const weight = useHealthDaily('weight', days);
-  const steps = useHealthDaily('steps', days);
+  const [comp, setComp] = useState<Composition>('weight');
 
-  const raw = weight.data ?? [];
-  const smoothed = movingAverage(raw, 7);
-  const insight = weightInsight(raw);
-  const pace = insight.slopePerWeek != null ? assessPace(insight.slopePerWeek) : null;
+  const weight = useHealthDaily('weight', days);
+  const bodyFat = useHealthDaily('bodyFat', days);
+  const steps = useHealthDaily('steps', days);
+  const basal = useHealthDaily('basalEnergy', 7);
+  const active = useHealthDaily('activeEnergy', 7);
+
+  const series =
+    comp === 'weight'
+      ? (weight.data ?? [])
+      : comp === 'bodyFat'
+        ? (bodyFat.data ?? [])
+        : deriveFatMass(weight.data ?? [], bodyFat.data ?? []);
+
+  const meta = COMP_META[comp];
+  const smoothed = movingAverage(series, 7);
+  const insight = weightInsight(series);
+  const pace =
+    comp !== 'bodyFat' && insight.slopePerWeek != null ? assessPace(insight.slopePerWeek) : null;
   const link =
-    weight.data && steps.data && days >= 90 ? stepsWeightLink(weight.data, steps.data) : null;
+    comp === 'weight' && weight.data && steps.data && days >= 90
+      ? stepsWeightLink(weight.data, steps.data)
+      : null;
   const adherencePct = Math.round(insight.adherence28 * 100);
+  const guide = intakeGuide(basal.data ?? [], active.data ?? []);
 
   return (
     <Screen>
+      <Segmented options={COMPOSITIONS} value={comp} onChange={setComp} />
       <Segmented options={[...PERIODS]} value={days} onChange={setDays} />
 
       <Card>
-        <CardTitle hint="kg">体重の推移</CardTitle>
-        <WeightTrendChart raw={raw} smoothed={smoothed} />
+        <CardTitle hint={meta.unit}>{meta.title}</CardTitle>
+        <WeightTrendChart
+          raw={series}
+          smoothed={smoothed}
+          unit={meta.unit}
+          digits={meta.digits}
+        />
+        {comp === 'fatMass' && (
+          <ThemedText type="small" themeColor="textMuted">
+            体脂肪量 = 体重 × 体脂肪率(両方を計測した日のみ)
+          </ThemedText>
+        )}
       </Card>
 
       <View style={styles.row}>
         <StatTile
-          label="トレンド体重"
-          value={formatValue(insight.trendWeight, 1)}
-          unit="kg"
+          label={`トレンド${COMPOSITIONS.find((c) => c.value === comp)!.label}`}
+          value={formatValue(insight.trendWeight, meta.digits)}
+          unit={meta.unit}
           delta={
             insight.latest && insight.trendWeight != null
               ? {
                   value: Math.round((insight.latest.value - insight.trendWeight) * 10) / 10,
-                  suffix: 'kg',
+                  suffix: meta.unit,
                   vs: '実測との差',
                   upIsGood: false,
                 }
@@ -72,7 +114,7 @@ export default function WeightScreen() {
               ? `${insight.slopePerWeek >= 0 ? '+' : ''}${insight.slopePerWeek.toFixed(2)}`
               : null
           }
-          unit="kg/週"
+          unit={`${meta.unit}/週`}
         />
       </View>
 
@@ -84,11 +126,69 @@ export default function WeightScreen() {
             {pace === 'losing-fast' || pace === 'gaining-fast'
               ? '週0.5kgを超える変化は体への負担が大きめです。食事と睡眠を見直してみましょう。'
               : pace === 'stable'
-                ? '体重は安定しています。この調子で計測を続けましょう。'
+                ? `${comp === 'fatMass' ? '体脂肪量' : '体重'}は安定しています。この調子で計測を続けましょう。`
                 : '健康的な範囲のペースです(目安: 週±0.5kg以内)。'}
           </ThemedText>
         </Card>
       )}
+
+      <Card>
+        <CardTitle hint={guide ? `基礎代謝データ ${guide.basalDays}日分` : undefined}>
+          1日の摂取カロリー目安
+        </CardTitle>
+        {guide ? (
+          <>
+            <View style={styles.kcalRow}>
+              <View style={styles.kcalItem}>
+                <ThemedText type="small" themeColor="textMuted">
+                  維持
+                </ThemedText>
+                <ThemedText type="smallBold" style={styles.kcalValue}>
+                  {guide.maintain.toLocaleString('ja-JP')}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textMuted">
+                  kcal
+                </ThemedText>
+              </View>
+              <View style={styles.kcalItem}>
+                <ThemedText type="small" themeColor="textMuted">
+                  -0.25kg/週
+                </ThemedText>
+                <ThemedText type="smallBold" style={styles.kcalValue}>
+                  {guide.loseQuarterKgPerWeek.toLocaleString('ja-JP')}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textMuted">
+                  kcal
+                </ThemedText>
+              </View>
+              <View style={styles.kcalItem}>
+                <ThemedText type="small" themeColor="textMuted">
+                  -0.5kg/週
+                </ThemedText>
+                <ThemedText type="smallBold" style={styles.kcalValue}>
+                  {guide.loseHalfKgPerWeek.toLocaleString('ja-JP')}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textMuted">
+                  kcal
+                </ThemedText>
+              </View>
+            </View>
+            <ThemedText type="small" themeColor="textSecondary">
+              あなたの実測データから: 基礎代謝 {guide.basalAvg.toLocaleString('ja-JP')} kcal +
+              アクティブ {guide.activeAvg.toLocaleString('ja-JP')} kcal(7日平均)= 消費{' '}
+              {guide.tdee.toLocaleString('ja-JP')} kcal/日
+            </ThemedText>
+            <ThemedText type="small" themeColor="textMuted">
+              体脂肪1kg ≈ 7,700kcal で換算した目安です。極端な制限は避けましょう。
+            </ThemedText>
+          </>
+        ) : (
+          <ThemedText type="small" themeColor="textSecondary">
+            基礎代謝(安静時消費エネルギー)のデータがまだ足りません。Apple
+            Watchを着けていれば自動で記録されます。
+          </ThemedText>
+        )}
+      </Card>
 
       <Card>
         <CardTitle hint="直近28日">計測の継続率</CardTitle>
@@ -130,6 +230,20 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: Spacing.three,
+  },
+  kcalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+  },
+  kcalItem: {
+    alignItems: 'center',
+    gap: 2,
+    flex: 1,
+  },
+  kcalValue: {
+    fontSize: 20,
+    lineHeight: 26,
   },
   meterRow: {
     flexDirection: 'row',

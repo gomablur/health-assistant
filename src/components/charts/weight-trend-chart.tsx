@@ -12,6 +12,9 @@ interface Props {
   raw: DailyPoint[];
   smoothed: DailyPoint[];
   height?: number;
+  /** value unit shown in the tooltip (default kg) */
+  unit?: string;
+  digits?: number;
 }
 
 const CHART_HEIGHT = 220;
@@ -21,7 +24,13 @@ const Y_LABEL_WIDTH = 36;
  * Weight over time: raw measurements as de-emphasized dots, the 7-day moving
  * average as the 2px story line, crosshair tooltip on touch/hover.
  */
-export function WeightTrendChart({ raw, smoothed, height = CHART_HEIGHT }: Props) {
+export function WeightTrendChart({
+  raw,
+  smoothed,
+  height = CHART_HEIGHT,
+  unit = 'kg',
+  digits = 1,
+}: Props) {
   const theme = useTheme();
   const [width, setWidth] = useState(0);
 
@@ -102,11 +111,11 @@ export function WeightTrendChart({ raw, smoothed, height = CHART_HEIGHT }: Props
                   {items[0]?.date ? formatMonthDay(items[0].date) : ''}
                 </ThemedText>
                 <ThemedText type="smallBold">
-                  実測 {items[0]?.value?.toFixed(1)} kg
+                  実測 {items[0]?.value?.toFixed(digits)} {unit}
                 </ThemedText>
                 {items[1] ? (
                   <ThemedText type="small" themeColor="textSecondary">
-                    平均 {items[1].value.toFixed(1)} kg
+                    平均 {items[1].value.toFixed(digits)} {unit}
                   </ThemedText>
                 ) : null}
               </View>

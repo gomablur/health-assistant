@@ -17,9 +17,11 @@ import { unionHours, type TimeInterval } from './intervals';
 
 const QUANTITY_TYPES: Partial<Record<MetricType, QuantityTypeIdentifier>> = {
   weight: 'HKQuantityTypeIdentifierBodyMass',
+  bodyFat: 'HKQuantityTypeIdentifierBodyFatPercentage',
   steps: 'HKQuantityTypeIdentifierStepCount',
   restingHeartRate: 'HKQuantityTypeIdentifierRestingHeartRate',
   activeEnergy: 'HKQuantityTypeIdentifierActiveEnergyBurned',
+  basalEnergy: 'HKQuantityTypeIdentifierBasalEnergyBurned',
 };
 
 const SLEEP_TYPE = 'HKCategoryTypeIdentifierSleepAnalysis' as const;
@@ -64,17 +66,23 @@ async function queryDailyStatistics(
   return points.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-async function queryDailyWeight(startISO: string, endISO: string): Promise<DailyPoint[]> {
+/** Body-composition style metric: the last measurement of each local day wins. */
+async function queryDailyLastSample(
+  identifier: QuantityTypeIdentifier,
+  unit: string,
+  startISO: string,
+  endISO: string,
+  scale = 1,
+): Promise<DailyPoint[]> {
   const { startDate, endDate } = dateWindow(startISO, endISO);
-  const samples = await queryQuantitySamples('HKQuantityTypeIdentifierBodyMass', {
+  const samples = await queryQuantitySamples(identifier, {
     filter: { date: { startDate, endDate } },
-    unit: 'kg',
+    unit,
     ascending: true,
     limit: 0,
   });
-  // last measurement wins for each local day
   const byDay = new Map<string, number>();
-  for (const s of samples) byDay.set(toISODate(new Date(s.endDate)), s.quantity);
+  for (const s of samples) byDay.set(toISODate(new Date(s.endDate)), s.quantity * scale);
   return [...byDay.entries()]
     .map(([date, value]) => ({ date, value }))
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -113,7 +121,10 @@ export const healthKitSource: HealthDataSource = {
   async queryDaily(metric, startISO, endISO) {
     switch (metric) {
       case 'weight':
-        return queryDailyWeight(startISO, endISO);
+        return queryDailyLastSample(QUANTITY_TYPES.weight!, 'kg', startISO, endISO);
+      case 'bodyFat':
+        // HealthKit stores body fat as a 0–1 fraction in '%' unit
+        return queryDailyLastSample(QUANTITY_TYPES.bodyFat!, '%', startISO, endISO, 100);
       case 'sleep':
         return queryDailySleep(startISO, endISO);
       case 'steps':
@@ -127,6 +138,14 @@ export const healthKitSource: HealthDataSource = {
       case 'activeEnergy':
         return queryDailyStatistics(
           QUANTITY_TYPES.activeEnergy!,
+          'sum',
+          'kcal',
+          startISO,
+          endISO,
+        );
+      case 'basalEnergy':
+        return queryDailyStatistics(
+          QUANTITY_TYPES.basalEnergy!,
           'sum',
           'kcal',
           startISO,

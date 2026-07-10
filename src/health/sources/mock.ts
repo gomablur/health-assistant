@@ -69,6 +69,16 @@ function generate(metric: MetricType): DailyPoint[] {
         value = Math.max(80, Math.round(180 + stepsProxy * 0.045 * (1 + 0.3 * gauss(rand))));
         break;
       }
+      case 'bodyFat': {
+        if (rand() < 0.12) break; // measured slightly less often than weight
+        const drift = -0.004 * i; // slow recomposition over the year
+        value = Math.round((22.5 + drift + 0.3 * seasonal + 0.45 * gauss(rand)) * 10) / 10;
+        break;
+      }
+      case 'basalEnergy': {
+        value = Math.round(1490 + 12 * seasonal + 24 * gauss(rand));
+        break;
+      }
     }
     if (value != null) points.push({ date, value });
   }

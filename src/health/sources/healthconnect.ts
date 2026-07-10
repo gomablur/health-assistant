@@ -15,10 +15,12 @@ import { unionHours, type TimeInterval } from './intervals';
 
 const RECORD_TYPES: Record<MetricType, RecordType> = {
   weight: 'Weight',
+  bodyFat: 'BodyFat',
   steps: 'Steps',
   restingHeartRate: 'RestingHeartRate',
   sleep: 'SleepSession',
   activeEnergy: 'ActiveCaloriesBurned',
+  basalEnergy: 'BasalMetabolicRate',
 };
 
 let initPromise: Promise<boolean> | null = null;
@@ -87,6 +89,28 @@ export const healthConnectSource: HealthDataSource = {
           const day = toISODate(new Date(r.startTime));
           byDay.set(day, (byDay.get(day) ?? 0) + r.energy.inKilocalories);
         }
+        return toSortedPoints(byDay);
+      }
+      case 'bodyFat': {
+        const records = await readAll('BodyFat', startISO, endISO);
+        const byDay = new Map<string, number>();
+        for (const r of records) byDay.set(toISODate(new Date(r.time)), r.percentage);
+        return toSortedPoints(byDay);
+      }
+      case 'basalEnergy': {
+        // BMR readings are kcal/day rates; a day's basal burn ≈ that day's mean rate
+        const records = await readAll('BasalMetabolicRate', startISO, endISO);
+        const sums = new Map<string, { total: number; n: number }>();
+        for (const r of records) {
+          const day = toISODate(new Date(r.time));
+          const cur = sums.get(day) ?? { total: 0, n: 0 };
+          sums.set(day, {
+            total: cur.total + r.basalMetabolicRate.inKilocaloriesPerDay,
+            n: cur.n + 1,
+          });
+        }
+        const byDay = new Map<string, number>();
+        for (const [day, { total, n }] of sums) byDay.set(day, total / n);
         return toSortedPoints(byDay);
       }
       case 'restingHeartRate': {
