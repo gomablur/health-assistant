@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.goma_b.healthassistant",
+      "bundleIdentifier": "com.goma-b.healthassistant",
       "infoPlist": {
         "NSHealthShareUsageDescription": "体重・歩数・睡眠・心拍などのヘルスデータを読み取り、トレンド分析と振り返りに使用します。データは端末内で処理されます。"
       }
