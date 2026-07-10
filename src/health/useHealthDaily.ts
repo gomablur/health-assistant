@@ -5,8 +5,9 @@ import { getHealthSource } from './index';
 import type { DailyPoint, MetricType } from './types';
 
 interface State {
+  /** query key the data belongs to — loading is derived from key mismatch */
+  key: string | null;
   data: DailyPoint[] | null;
-  loading: boolean;
   error: string | null;
 }
 
@@ -17,41 +18,48 @@ export function invalidateHealthCache() {
   cache.clear();
 }
 
-/** Daily series for the past `days` days (today inclusive). */
+/**
+ * Daily series for the past `days` days (today inclusive). While a new query
+ * is in flight the previous data stays available, so period switches don't
+ * flash empty charts.
+ */
 export function useHealthDaily(metric: MetricType, days: number) {
-  const [state, setState] = useState<State>({ data: null, loading: true, error: null });
+  const [state, setState] = useState<State>({ key: null, data: null, error: null });
   const [refreshToken, setRefreshToken] = useState(0);
+  const key = `${metric}:${days}:${todayISO()}:${refreshToken}`;
 
   useEffect(() => {
     let cancelled = false;
-    const key = `${metric}:${days}:${todayISO()}`;
-    const cached = cache.get(key);
-    if (cached && refreshToken === 0) {
-      setState({ data: cached, loading: false, error: null });
-      return;
-    }
-    setState((s) => ({ ...s, loading: true, error: null }));
+    const cacheKey = `${metric}:${days}:${todayISO()}`;
+    const cached = cache.get(cacheKey);
     const end = todayISO();
     const start = addDays(end, -(days - 1));
-    getHealthSource()
-      .queryDaily(metric, start, end)
+    const promise = cached
+      ? Promise.resolve(cached)
+      : getHealthSource().queryDaily(metric, start, end);
+    promise
       .then((data) => {
-        cache.set(key, data);
-        if (!cancelled) setState({ data, loading: false, error: null });
+        cache.set(cacheKey, data);
+        if (!cancelled) setState({ key, data, error: null });
       })
       .catch((e: unknown) => {
         if (!cancelled)
-          setState({ data: null, loading: false, error: e instanceof Error ? e.message : String(e) });
+          setState({ key, data: null, error: e instanceof Error ? e.message : String(e) });
       });
     return () => {
       cancelled = true;
     };
-  }, [metric, days, refreshToken]);
+  }, [key, metric, days]);
 
   const refresh = useCallback(() => {
     invalidateHealthCache();
     setRefreshToken((t) => t + 1);
   }, []);
 
-  return { ...state, refresh };
+  return {
+    data: state.data,
+    loading: state.key !== key,
+    error: state.key === key ? state.error : null,
+    refresh,
+  };
 }

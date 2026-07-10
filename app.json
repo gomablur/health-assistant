@@ -8,9 +8,21 @@
     "scheme": "healthassistant",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "dev.gomablur.healthassistant",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "体重・歩数・睡眠・心拍などのヘルスデータを読み取り、トレンド分析と振り返りに使用します。データは端末内で処理されます。"
+      }
     },
     "android": {
+      "package": "dev.gomablur.healthassistant",
+      "permissions": [
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -35,7 +47,14 @@
       ],
       "expo-sqlite",
       "expo-secure-store",
-      "@kingstinct/react-native-healthkit",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "体重・歩数・睡眠・心拍などのヘルスデータを読み取り、トレンド分析と振り返りに使用します。データは端末内で処理されます。",
+          "NSHealthUpdateUsageDescription": false,
+          "background": false
+        }
+      ],
       "react-native-health-connect"
     ],
     "experiments": {

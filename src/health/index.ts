@@ -19,6 +19,7 @@ export function getHealthSource(): HealthDataSource {
   if (process.env.EXPO_PUBLIC_MOCK_HEALTH !== '1') {
     try {
       // Metro picks the platform-specific file, so web never bundles native SDKs.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const native = require('./sources/native').createNativeSource as
         | (() => HealthDataSource | null)
         | undefined;
