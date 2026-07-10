@@ -19,7 +19,7 @@ cd health-assistant
 npm install
 
 # iPhone を USB で Mac につないでから:
-npx expo run:ios --device
+npm run device:ios
 ```
 
 初回は以下を聞かれます:
@@ -31,7 +31,7 @@ npx expo run:ios --device
 3. 起動後、アプリがヘルスケアへのアクセス許可を求めるので、読み取りを許可する。
 
 > **無料 Apple ID の制限**: 署名は **7日で失効**します。アプリが起動しなくなったら
-> もう一度 `npx expo run:ios --device` を実行すれば再署名されます(データは残ります)。
+> もう一度 `npm run device:ios` を実行すれば再署名されます(データは残ります)。
 
 ## 日々の開発ループ
 
@@ -46,7 +46,26 @@ npx expo start   # Metro を起動
 実機にインストール済みの health-assistant(dev client)を開くと、
 同一 LAN 上の Metro に接続され、JS の変更は即時反映されます。
 
-ネイティブ設定を変えたときだけ、再度 `npx expo run:ios --device` を実行してください。
+ネイティブ設定を変えたときだけ、再度 `npm run device:ios` を実行してください。
+
+## 外でも使う(スタンドアロン / Metro 不要)
+
+上の dev client は JS を Mac の Metro から読み込むため、**同一 LAN 上で `npm start`
+していないと起動しません**。JS をアプリ内に埋め込んだ **Release ビルド**にすると、
+Mac も LAN も不要で、外出先でもオフラインでも起動します。
+
+```bash
+# iPhone を USB で Mac につないでから:
+npm run standalone:ios
+```
+
+一度インストールすれば、以降は普通のアプリと同じように単体で動きます。
+
+> **無料 Apple ID の場合**: Release 版でも **7日で失効**します。7日ごとに
+> `npm run standalone:ios` で入れ直してください。
+> この入れ直しをなくしたい・人に配りたい場合は、有料の **Apple Developer Program
+> ($99/年)** に加入すると TestFlight が使えて有効期間が 90 日に伸び、Mac なしの
+> クラウド配信もできるようになります。
 
 ## Android
 
@@ -54,10 +73,20 @@ Android 実機(Android 14 以降推奨。13 以前は Play ストアから Healt
 
 ```bash
 # Android Studio をインストールして SDK を用意し、実機の USB デバッグを有効化してから:
-npx expo run:android --device
+npm run device:android
 ```
 
 初回起動時に Health Connect の読み取り許可を求めます。
+
+**スタンドアロン / 配布**: Android は EAS Build の無料枠で **Google Play アカウント不要**の
+インストール可能な APK を作れます(要 `npm i -g eas-cli` と Expo アカウント):
+
+```bash
+npm run build:android-apk   # eas build -p android --profile preview
+```
+
+USB 接続でローカルに Release を焼くだけなら `npm run standalone:android` でも可
+(署名用 keystore の設定が必要)。
 
 ## トラブルシューティング
 
@@ -65,5 +94,7 @@ npx expo run:android --device
 |---|---|
 | ヘルスデータが全部空 | 設定アプリ > ヘルスケア > データアクセスとデバイス > health-assistant で読み取りが許可されているか確認 |
 | 「モックデータを表示中」と出る | dev client ではなく Expo Go で開いている。ホーム画面のアプリアイコンから起動する |
-| 7日経って起動しない | 無料署名の失効。`npx expo run:ios --device` で再署名 |
+| 7日経って起動しない | 無料署名の失効。`npm run device:ios`(または `npm run standalone:ios`)で再署名 |
+| 外で開くと起動しない / 白画面 | dev client は Metro 必須。外でも使うなら `npm run standalone:ios` で Release 版を入れる |
 | Metro に繋がらない | Mac と iPhone が同じ Wi-Fi か確認。`npx expo start --tunnel` も試す |
+| bundleIdentifier / package を変えた | 既存の `ios/` `android/` に反映されない。`npm run prebuild:clean` で作り直してから再ビルド |

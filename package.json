@@ -64,7 +64,13 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "prebuild:clean": "expo prebuild --clean",
+    "device:ios": "expo run:ios --device",
+    "device:android": "expo run:android --device",
+    "standalone:ios": "expo run:ios --device --configuration Release",
+    "standalone:android": "expo run:android --device --variant release",
+    "build:android-apk": "eas build -p android --profile preview"
   },
   "private": true
 }
