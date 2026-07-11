@@ -45,8 +45,10 @@ npx expo start   # Metro を起動
 
 実機にインストール済みの health-assistant(dev client)を開くと、
 同一 LAN 上の Metro に接続され、JS の変更は即時反映されます。
+Android も同じ流れです(初回に接続先の書き込みが済んでいれば USB 不要。後述)。
 
-ネイティブ設定を変えたときだけ、再度 `npm run device:ios` を実行してください。
+ネイティブ設定を変えたときだけ、再度 `npm run device:ios`(Android は
+`npm run device:android`)を実行してください。
 
 ## 外でも使う(スタンドアロン / Metro 不要)
 
@@ -78,6 +80,18 @@ npm run device:android
 
 初回起動時に Health Connect の読み取り許可を求めます。
 
+> **Metro への接続方式**: デバッグビルドの既定は `localhost:8081`(USB トンネル
+> `adb reverse` 前提)ですが、この方式は端末によってトンネルが無言で切れ、
+> スプラッシュ画面のままフリーズします(実測: OPPO CPH2309 / Android 12)。
+> そのため `device:android` はビルド前に **Mac の LAN IP をアプリの接続先として
+> 書き込みます**(内部で `npm run android:metro-host` を実行)。
+>
+> 一度書き込めば以降の日々の開発は USB 不要: `npm start` で Metro を起動して
+> アプリを開くだけで、Wi-Fi 経由で接続・リロードされます。
+> **Mac の IP が変わった時・アプリを入れ直した時**だけ、USB を挿して
+> `npm run android:metro-host` を再実行してください
+> (IP の手動指定は `npm run android:metro-host -- 192.168.x.x`)。
+
 **スタンドアロン / 配布**: Android は EAS Build の無料枠で **Google Play アカウント不要**の
 インストール可能な APK を作れます(要 `npm i -g eas-cli` と Expo アカウント):
 
@@ -92,7 +106,7 @@ USB 接続でローカルに Release を焼くだけなら `npm run standalone:a
 
 | 症状 | 対処 |
 |---|---|
-| Android: スプラッシュで固まる | JSバンドルがMetroから届いていない(スプラッシュはReactが描画されて初めて消えるため)。USB経由に切り替えて切り分ける: ターミナル1で `npm run start:usb`(= `expo start --localhost`)、`adb reverse tcp:8081 tcp:8081`、ターミナル2で `npm run device:android:usb`(bundlerを起動しない)。`npx expo start --tunnel` でも切り分け可 |
+| Android: スプラッシュで固まる | Metro に接続できていない(RN は応答が来ないと無言で待ち続ける)。Mac と実機が同じ Wi-Fi にいるか確認し、USB を挿して `npm run android:metro-host` で接続先を Mac の LAN IP に再設定 → `npm start` → アプリを起動し直す。疎通確認は実機ブラウザで `http://<MacのIP>:8081/status`(`packager-status:running` が出ればOK) |
 | ヘルスデータが全部空 | 設定アプリ > ヘルスケア > データアクセスとデバイス > health-assistant で読み取りが許可されているか確認 |
 | 「モックデータを表示中」と出る | dev client ではなく Expo Go で開いている。ホーム画面のアプリアイコンから起動する |
 | 7日経って起動しない | 無料署名の失効。`npm run device:ios`(または `npm run standalone:ios`)で再署名 |
