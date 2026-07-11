@@ -31,8 +31,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "minSdkVersion": 26
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
@@ -58,7 +57,15 @@
           "background": false
         }
       ],
-      "react-native-health-connect"
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
