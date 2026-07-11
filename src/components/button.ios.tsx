@@ -1,5 +1,6 @@
 import { Button as SwiftUIButton, Host } from '@expo/ui/swift-ui';
 import { buttonStyle, controlSize, disabled as disabledModifier } from '@expo/ui/swift-ui/modifiers';
+import { StyleSheet } from 'react-native';
 
 interface Props {
   title: string;
@@ -15,7 +16,9 @@ interface Props {
  */
 export function Button({ title, onPress, variant = 'primary', disabled, loading }: Props) {
   return (
-    <Host matchContents style={{ alignItems: 'center' }}>
+    // 横幅は親いっぱいに取り(SwiftUI側で中央配置される)、高さだけ中身に合わせる。
+    // matchContents を横にも効かせるとHostがボタン幅まで縮み、左寄せに見えてしまう
+    <Host matchContents={{ vertical: true }} style={styles.host}>
       <SwiftUIButton
         label={loading ? '処理中…' : title}
         onPress={onPress}
@@ -28,3 +31,9 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading 
     </Host>
   );
 }
+
+const styles = StyleSheet.create({
+  host: {
+    width: '100%',
+  },
+});
