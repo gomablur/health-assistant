@@ -1,0 +1,43 @@
+# デモWebサイトを Cloudflare Workers(静的アセット配信)へデプロイする。
+#
+# 前提: リポジトリの Secrets に以下を登録しておくこと
+#   CLOUDFLARE_API_TOKEN  … Workers の編集権限を持つAPIトークン
+#   CLOUDFLARE_ACCOUNT_ID … CloudflareダッシュボードのアカウントID
+#
+# 配信されるのはモックデータ版(Webにはネイティブのヘルス実装がないため)。
+name: deploy-web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 手動実行も可
+
+# 同時実行を抑止(古いデプロイが新しいものを上書きしないように)
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # デプロイ前の門番: 壊れたものを公開しない
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run lint
+
+      - run: npm run build:web # dist/ に静的サイトを出力(モックデータ有効)
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

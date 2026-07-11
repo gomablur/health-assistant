@@ -24,6 +24,7 @@
 | `src/constants/theme.ts` | デザイントークン(検証済みパレット)。色はここからだけ取る |
 | `plugins/` | ローカル config plugin(Health Connect の権限delegate注入など) |
 | `scripts/` | `gen-icons.mjs`(アイコン生成)、`android-metro-host.sh`(Android実機のMetro接続先設定) |
+| `wrangler.jsonc` | デモWeb(Cloudflare Workers静的配信)の設定。デプロイはmainへのpushでGH Actionsが実行 |
 
 ## 不変条件・ハマりどころ
 
@@ -47,6 +48,7 @@ npm run typecheck  # tsc --noEmit
 npm run lint
 npm run web        # モックデータでUI確認(Webはネイティブ実装がないため常にモック)
 npm run icons      # アプリアイコン一式を再生成
+npm run build:web  # デモサイトを dist/ に出力(モックデータ)
 ```
 
 実機系(Mac側): `npm run device:ios` / `npm run device:android` / `npm start`

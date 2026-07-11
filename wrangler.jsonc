@@ -1,0 +1,16 @@
+{
+  // デモWebサイト(Cloudflare Workers の静的アセット配信)。
+  // 中身は expo export -p web の出力。実機のヘルスデータは読めないので、
+  // ビルド時に EXPO_PUBLIC_MOCK_HEALTH=1 を渡してモックデータで動かす。
+  // デプロイは GitHub Actions(.github/workflows/deploy-web.yml)から。
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "health-assistant-demo",
+  "compatibility_date": "2026-07-11",
+  "assets": {
+    // expo-router の static 出力はルートごとに .html を吐くので、
+    // /weight → weight.html の解決を Workers 側に任せる
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
+}

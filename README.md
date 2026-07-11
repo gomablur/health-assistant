@@ -39,6 +39,21 @@ npm run web           # モックデータでUI確認
 
 開発の詳しい約束事は [AGENTS.md](AGENTS.md) を参照。
 
+## デモサイト(Cloudflare Workers)
+
+`main` への push で GitHub Actions が Web版(モックデータ)をデプロイする
+([.github/workflows/deploy-web.yml](.github/workflows/deploy-web.yml))。
+ネイティブのヘルス実装がないWebでは常にモックデータで動作する。
+
+ローカルから手動でデプロイする場合:
+
+```bash
+npx wrangler login
+npm run deploy:web
+```
+
+必要なリポジトリSecrets: `CLOUDFLARE_API_TOKEN`(Workers編集権限)、`CLOUDFLARE_ACCOUNT_ID`。
+
 ## 実機で使う
 
 [docs/BUILD.md](docs/BUILD.md) を参照(Mac + Xcode で `npm run device:ios`)。
