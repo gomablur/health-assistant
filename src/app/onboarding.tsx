@@ -20,9 +20,11 @@ export default function OnboardingScreen() {
   const setOnboarded = useSettings((s) => s.setOnboarded);
   const [requesting, setRequesting] = useState(false);
   const [denied, setDenied] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const start = async () => {
     setRequesting(true);
+    setErrorMessage(null);
     try {
       const granted = await getHealthSource().requestPermissions(ALL_METRICS);
       if (!granted) {
@@ -30,8 +32,9 @@ export default function OnboardingScreen() {
         return;
       }
       finish();
-    } catch {
+    } catch (e) {
       setDenied(true);
+      setErrorMessage(e instanceof Error ? e.message : String(e));
     } finally {
       setRequesting(false);
     }
@@ -74,7 +77,7 @@ export default function OnboardingScreen() {
         <View style={styles.footer}>
           {denied && (
             <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-              権限が許可されませんでした。あとから設定画面で再リクエストできます。
+              {errorMessage ?? '権限が許可されませんでした。あとから設定画面で再リクエストできます。'}
             </ThemedText>
           )}
           <Button

@@ -1,7 +1,9 @@
 import {
+  getSdkStatus,
   initialize,
   readRecords,
   requestPermission,
+  SdkAvailabilityStatus,
   type Permission,
   type ReadRecordsOptions,
   type RecordType,
@@ -30,6 +32,19 @@ function ensureInitialized(): Promise<boolean> {
   return initPromise;
 }
 
+/**
+ * On Android 13 and below Health Connect is a separate Play Store app, not
+ * part of the OS. Requesting permissions while it is missing crashes with an
+ * unresolvable intent, so availability must be checked first.
+ */
+async function sdkStatus(): Promise<number> {
+  try {
+    return await getSdkStatus();
+  } catch {
+    return SdkAvailabilityStatus.SDK_UNAVAILABLE;
+  }
+}
+
 async function readAll<T extends RecordType>(recordType: T, startISO: string, endISO: string) {
   const timeRangeFilter: ReadRecordsOptions['timeRangeFilter'] = {
     operator: 'between',
@@ -54,15 +69,34 @@ function toSortedPoints(byDay: Map<string, number>): DailyPoint[] {
 
 export const healthConnectSource: HealthDataSource = {
   kind: 'healthconnect',
-  isAvailable: () => ensureInitialized(),
+  async isAvailable() {
+    return (await sdkStatus()) === SdkAvailabilityStatus.SDK_AVAILABLE && ensureInitialized();
+  },
   async requestPermissions(metrics) {
+    const status = await sdkStatus();
+    if (status === SdkAvailabilityStatus.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED) {
+      throw new Error(
+        'ヘルスコネクトアプリの更新が必要です。Playストアで「ヘルスコネクト」を更新してください。',
+      );
+    }
+    if (status !== SdkAvailabilityStatus.SDK_AVAILABLE) {
+      throw new Error(
+        'この端末ではヘルスコネクトが見つかりません。Android 13以前では、Playストアから「ヘルスコネクト (Health Connect)」アプリのインストールが必要です。',
+      );
+    }
     if (!(await ensureInitialized())) return false;
     const wanted: Permission[] = metrics.map((m) => ({
       accessType: 'read',
       recordType: RECORD_TYPES[m],
     }));
-    const granted = await requestPermission(wanted);
-    return granted.length > 0;
+    try {
+      const granted = await requestPermission(wanted);
+      return granted.length > 0;
+    } catch (e) {
+      throw new Error(
+        `権限のリクエストに失敗しました: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   },
   async queryDaily(metric, startISO, endISO) {
     if (!(await ensureInitialized())) return [];

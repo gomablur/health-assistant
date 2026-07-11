@@ -56,6 +56,8 @@ export default function SettingsScreen() {
             : 'ヘルスコネクトアプリからアクセス許可を確認してください。',
         );
       }
+    } catch (e) {
+      Alert.alert('権限をリクエストできません', e instanceof Error ? e.message : String(e));
     } finally {
       setRequesting(false);
     }
