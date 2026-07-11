@@ -58,6 +58,7 @@
         }
       ],
       "react-native-health-connect",
+      "./plugins/with-health-connect-permission-usage",
       [
         "expo-build-properties",
         {
