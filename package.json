@@ -15,7 +15,8 @@
     "lint": "expo lint",
     "prebuild:clean": "expo prebuild --clean",
     "device:ios": "expo run:ios --device",
-    "device:android": "expo run:android --device --localhost",
+    "device:android": "expo run:android --device",
+    "device:android:usb": "expo run:android --device --no-bundler",
     "standalone:ios": "expo run:ios --device --configuration Release",
     "standalone:android": "expo run:android --device --variant release",
     "build:android-apk": "eas build -p android --profile preview"
