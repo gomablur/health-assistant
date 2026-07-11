@@ -2,6 +2,23 @@
   "name": "health-assistant",
   "main": "expo-router/entry",
   "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "start": "expo start",
+    "reset-project": "node ./scripts/reset-project.js",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "expo lint",
+    "prebuild:clean": "expo prebuild --clean",
+    "device:ios": "expo run:ios --device",
+    "device:android": "expo run:android --device",
+    "standalone:ios": "expo run:ios --device --configuration Release",
+    "standalone:android": "expo run:android --device --variant release",
+    "build:android-apk": "eas build -p android --profile preview"
+  },
   "dependencies": {
     "@expo/ui": "~57.0.4",
     "@expo/vector-icons": "^15.0.2",
@@ -56,22 +73,5 @@
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1"
     }
-  },
-  "scripts": {
-    "test": "jest",
-    "typecheck": "tsc --noEmit",
-    "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "lint": "expo lint",
-    "prebuild:clean": "expo prebuild --clean",
-    "device:ios": "expo run:ios --device",
-    "device:android": "expo run:android --device",
-    "standalone:ios": "expo run:ios --device --configuration Release",
-    "standalone:android": "expo run:android --device --variant release",
-    "build:android-apk": "eas build -p android --profile preview"
-  },
-  "private": true
+  }
 }
