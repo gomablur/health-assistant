@@ -6,6 +6,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "health-assistant-demo",
   "compatibility_date": "2026-07-11",
+  // 標準の *.workers.dev サブドメインは無効化(独自ドメインで配信するため)。
+  // 独自ドメインをコード側で管理したい場合は routes に追記する:
+  //   "routes": [{ "pattern": "demo.example.com", "custom_domain": true }]
+  "workers_dev": false,
   "assets": {
     // expo-router の static 出力はルートごとに .html を吐くので、
     // /weight → weight.html の解決を Workers 側に任せる
