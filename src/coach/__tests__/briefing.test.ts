@@ -53,6 +53,15 @@ describe('buildDailyBrief', () => {
     expect(kinds).toContain('weight-streak');
   });
 
+  it('notices when sleep has not been measured for days', () => {
+    const today = todayISO();
+    const sleep = ending(flat(30, 7)).filter((p) => p.date <= addDays(today, -3));
+    const brief = buildDailyBrief(baseSeries({ sleep }), { seed: 0 });
+    const kinds = [brief.headline.kind, ...brief.items.map((i) => i.kind)];
+    expect(kinds).toContain('sleep-gap');
+    expect(brief.headline.kind).not.toBe('sleep-deficit'); // stale data must not warn
+  });
+
   it('warns about three consecutive short nights', () => {
     const sleep = ending([...flat(27, 7), 5.5, 5.8, 5.2]);
     const brief = buildDailyBrief(baseSeries({ sleep }), { seed: 0 });

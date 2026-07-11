@@ -18,6 +18,7 @@ export type BriefKind =
   | 'adherence-praise'
   | 'adherence-gap'
   | 'sleep-deficit'
+  | 'sleep-gap'
   | 'heart-elevated'
   | 'steps-surge'
   | 'steps-decline'
@@ -27,6 +28,8 @@ export type BriefKind =
 export interface BriefFinding {
   kind: BriefKind;
   priority: number;
+  /** chip label for compact display (≤6 chars) */
+  chip: string;
   message: string;
   /** optional supporting sentence */
   detail?: string;
@@ -78,6 +81,7 @@ function weightNoise(weight: DailyPoint[], seed: number): BriefFinding | null {
   return {
     kind: 'weight-noise',
     priority: 90,
+    chip: 'ノイズ',
     message: pick(
       [
         `前回より${signed(deltaRaw)}kgと大きく${direction}ましたが、トレンド体重は${kg(trendNow)}でほぼ動いていません。`,
@@ -123,6 +127,7 @@ function weightStreak(weight: DailyPoint[], seed: number): BriefFinding | null {
   return {
     kind: 'weight-streak',
     priority: 70 + weeks,
+    chip: direction < 0 ? '減少続く' : '増加続く',
     message: pick(
       [
         `トレンド体重が${weeks}週連続で${word}中です(週${signed(perWeek ?? 0, 2)}kgペース)。`,
@@ -148,6 +153,7 @@ function weightPaceFast(weight: DailyPoint[]): BriefFinding | null {
   return {
     kind: 'weight-pace-fast',
     priority: 85,
+    chip: '急ペース',
     message: `この4週間、週${signed(insight.slopePerWeek, 2)}kgとやや急な${word}ペースです。`,
     detail: '週0.5kgを超える変化は体への負担が大きめ。食事量と睡眠を一度見直してみましょう。',
   };
@@ -168,6 +174,7 @@ function adherence(weight: DailyPoint[], seed: number): BriefFinding | null {
       return {
         kind: 'adherence-gap',
         priority: 65,
+        chip: '計測空き',
         message: `体重計測が${gap}日空いています。`,
         detail: '完璧じゃなくて大丈夫。今日1回乗るだけでトレンドの精度が戻ります。',
       };
@@ -183,6 +190,7 @@ function adherence(weight: DailyPoint[], seed: number): BriefFinding | null {
   return {
     kind: 'adherence-praise',
     priority: 55,
+    chip: '継続中',
     message: pick(
       [
         `毎朝の計測が${streak}日続いています。継続は分析の土台、すばらしい習慣です。`,
@@ -190,6 +198,21 @@ function adherence(weight: DailyPoint[], seed: number): BriefFinding | null {
       ],
       seed,
     ),
+  };
+}
+
+/** The watch hasn't recorded sleep for a couple of nights (forgot to wear / charge). */
+function sleepGap(sleep: DailyPoint[]): BriefFinding | null {
+  if (sleep.length < 5) return null; // only meaningful for someone who usually measures
+  const last = sleep[sleep.length - 1];
+  const gap = dayIndex(todayISO()) - dayIndex(last.date);
+  if (gap < 2) return null;
+  return {
+    kind: 'sleep-gap',
+    priority: 58,
+    chip: '睡眠未計測',
+    message: `睡眠が${gap}日計測できていません。`,
+    detail: 'Apple Watchの充電と装着を確認してみてください。睡眠は分析の重要なピースです。',
   };
 }
 
@@ -204,6 +227,7 @@ function sleepDeficit(sleep: DailyPoint[]): BriefFinding | null {
   return {
     kind: 'sleep-deficit',
     priority: 80,
+    chip: '睡眠不足',
     message: `睡眠が3日続けて6時間を切っています(平均${avg.toFixed(1)}時間)。`,
     detail: '寝不足はむくみや食欲にも響きます。今夜は30分だけ早くベッドへ。',
   };
@@ -222,6 +246,7 @@ function heartElevated(heart: DailyPoint[]): BriefFinding | null {
   return {
     kind: 'heart-elevated',
     priority: 75,
+    chip: '心拍高め',
     message: `安静時心拍がいつもより${Math.round(recentAvg - baseline)}bpm高めです(${Math.round(recentAvg)}bpm)。`,
     detail: '疲労やストレス、飲酒後にも上がります。数日続くようなら休息を優先して。',
   };
@@ -238,6 +263,7 @@ function stepsChange(steps: DailyPoint[], seed: number): BriefFinding | null {
     return {
       kind: 'steps-surge',
       priority: 60,
+      chip: 'よく歩いた',
       message: pick(
         [
           `${Math.round(last.value).toLocaleString('ja-JP')}歩、いつもの1.5倍以上歩きました。`,
@@ -254,6 +280,7 @@ function stepsChange(steps: DailyPoint[], seed: number): BriefFinding | null {
     return {
       kind: 'steps-decline',
       priority: 50,
+      chip: '歩数減',
       message: `今週の歩数が先週より${Math.round((1 - thisWeek / prevWeek) * 100)}%減っています。`,
       detail: '1駅歩く・昼に10分散歩、くらいの小さな一歩で十分戻せます。',
     };
@@ -281,6 +308,7 @@ function correlation(weight: DailyPoint[], steps: DailyPoint[]): BriefFinding | 
   return {
     kind: 'correlation',
     priority: 45,
+    chip: '発見',
     message: `あなたのデータでは、よく歩いた日の${best.lag}日後に体重が${direction}傾向があります(r=${best.r.toFixed(2)})。`,
     detail: '相関は因果ではありませんが、生活のリズムを知るヒントになります。',
   };
@@ -298,6 +326,7 @@ function status(series: BriefSeries, seed: number): BriefFinding {
     return {
       kind: 'status',
       priority: 10,
+      chip: '順調',
       message: pick(
         [
           `トレンド体重は${kg(insight.trendWeight)}、${paceText}。`,
@@ -311,6 +340,7 @@ function status(series: BriefSeries, seed: number): BriefFinding {
   return {
     kind: 'status',
     priority: 10,
+    chip: 'はじめの一歩',
     message: 'まだデータが少なめです。まずは毎朝の体重計測を1週間続けてみましょう。',
     detail: '7日分たまると、ノイズをならしたトレンドが見えてきます。',
   };
@@ -333,6 +363,7 @@ export function buildDailyBrief(
     weightPaceFast(series.weight),
     adherence(series.weight, seed),
     sleepDeficit(series.sleep),
+    sleepGap(series.sleep),
     heartElevated(series.restingHeartRate),
     stepsChange(series.steps, seed),
     correlation(series.weight, series.steps),

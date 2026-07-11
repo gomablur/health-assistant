@@ -1,7 +1,8 @@
 import { Link } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { weightInsight } from '@/analytics/insights';
+import { assessPace, weightInsight, type Pace } from '@/analytics/insights';
 import { movingAverage } from '@/analytics/stats';
 import { Card, CardTitle } from '@/components/card';
 import { WeightTrendChart } from '@/components/charts/weight-trend-chart';
@@ -13,7 +14,8 @@ import { Spacing } from '@/constants/theme';
 import { isMockSource } from '@/health';
 import type { DailyPoint } from '@/health/types';
 import { useHealthDaily } from '@/health/useHealthDaily';
-import { todayISO } from '@/utils/date';
+import { useTheme } from '@/hooks/use-theme';
+import { addDays, todayISO } from '@/utils/date';
 import { formatValue } from '@/utils/format';
 
 const KIND_ICON: Record<BriefKind, string> = {
@@ -23,6 +25,7 @@ const KIND_ICON: Record<BriefKind, string> = {
   'adherence-praise': '🔥',
   'adherence-gap': '📆',
   'sleep-deficit': '😴',
+  'sleep-gap': '⌚',
   'heart-elevated': '💗',
   'steps-surge': '👟',
   'steps-decline': '👟',
@@ -36,6 +39,28 @@ function greeting(): string {
   if (h < 11) return 'おはようございます';
   if (h < 18) return 'こんにちは';
   return 'こんばんは';
+}
+
+/** hero arrow + color by trend direction (losing reads as the good direction here) */
+function paceVisual(pace: Pace): { arrow: string; colorKey: 'deltaGood' | 'deltaBad' | 'textSecondary' } {
+  switch (pace) {
+    case 'losing':
+      return { arrow: '↘', colorKey: 'deltaGood' };
+    case 'losing-fast':
+      return { arrow: '↘', colorKey: 'deltaBad' };
+    case 'gaining':
+    case 'gaining-fast':
+      return { arrow: '↗', colorKey: 'deltaBad' };
+    case 'stable':
+      return { arrow: '→', colorKey: 'textSecondary' };
+  }
+}
+
+/** last point only if it is fresh enough (within maxAgeDays of today) */
+function fresh(points: DailyPoint[] | null, maxAgeDays: number): number | null {
+  if (!points || points.length === 0) return null;
+  const last = points[points.length - 1];
+  return last.date >= addDays(todayISO(), -maxAgeDays) ? last.value : null;
 }
 
 function MiniStat({
@@ -54,7 +79,7 @@ function MiniStat({
       </ThemedText>
       <View style={styles.miniValueRow}>
         <ThemedText type="smallBold" style={styles.miniValue}>
-          {value ?? '—'}
+          {value ?? '未計測'}
         </ThemedText>
         {value != null && (
           <ThemedText type="small" themeColor="textMuted">
@@ -66,12 +91,10 @@ function MiniStat({
   );
 }
 
-function latest(points: DailyPoint[] | null): number | null {
-  return points && points.length > 0 ? points[points.length - 1].value : null;
-}
-
 export default function HomeScreen() {
-  const { brief, loading } = useDailyBrief();
+  const theme = useTheme();
+  const { brief } = useDailyBrief();
+  const [expandedKind, setExpandedKind] = useState<BriefKind | null>(null);
 
   const weight = useHealthDaily('weight', 30);
   const steps = useHealthDaily('steps', 7);
@@ -81,59 +104,94 @@ export default function HomeScreen() {
   const raw = weight.data ?? [];
   const smoothed = movingAverage(raw, 7);
   const insight = weightInsight(raw);
+  const pace = insight.slopePerWeek != null ? assessPace(insight.slopePerWeek) : null;
+  const visual = pace ? paceVisual(pace) : null;
 
   const today = new Date();
   const dateLabel = `${today.getMonth() + 1}月${today.getDate()}日 (${'日月火水木金土'[today.getDay()]})`;
-  const stepsToday =
-    steps.data && steps.data.length > 0 && steps.data[steps.data.length - 1].date === todayISO()
-      ? steps.data[steps.data.length - 1].value
-      : null;
+
+  // freshness: sleep is attributed to the wake-up day, so "last night" must be dated today
+  const sleepLastNight = fresh(sleep.data, 0);
+  const heartRecent = fresh(heart.data, 1);
+  const stepsToday = fresh(steps.data, 0);
+
+  const expanded = brief?.items.find((i) => i.kind === expandedKind) ?? null;
 
   return (
     <Screen>
       <View style={styles.header}>
-        <ThemedText type="subtitle">{greeting()}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          {dateLabel}
+          {greeting()} · {dateLabel}
         </ThemedText>
       </View>
 
-      {/* 今日のひとこと — the reason this app exists */}
-      <Card style={styles.heroCard}>
-        {brief ? (
-          <>
-            <ThemedText style={styles.heroText}>
-              {KIND_ICON[brief.headline.kind]} {brief.headline.message}
+      {/* hero: today's one number, direction at a glance */}
+      <View style={styles.hero}>
+        <ThemedText type="small" themeColor="textMuted">
+          トレンド体重
+        </ThemedText>
+        <View style={styles.heroRow}>
+          <ThemedText style={styles.heroValue}>
+            {formatValue(insight.trendWeight, 1) ?? '—'}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.heroUnit}>
+            kg
+          </ThemedText>
+          {visual && (
+            <ThemedText style={[styles.heroArrow, { color: theme[visual.colorKey] }]}>
+              {visual.arrow}
             </ThemedText>
-            {brief.headline.detail && (
-              <ThemedText type="small" themeColor="textSecondary">
-                {brief.headline.detail}
-              </ThemedText>
-            )}
-          </>
-        ) : (
-          <ThemedText type="small" themeColor="textMuted">
-            {loading ? 'データを分析しています…' : 'データがまだありません'}
+          )}
+        </View>
+        {insight.slopePerWeek != null && (
+          <View style={[styles.pacePill, { backgroundColor: theme.backgroundElement }]}>
+            <ThemedText type="small" themeColor="textSecondary">
+              週{insight.slopePerWeek >= 0 ? '+' : ''}
+              {insight.slopePerWeek.toFixed(2)}kg
+            </ThemedText>
+          </View>
+        )}
+        {brief && (
+          <ThemedText style={styles.headline}>
+            {KIND_ICON[brief.headline.kind]} {brief.headline.message}
           </ThemedText>
         )}
-      </Card>
+      </View>
 
+      {/* findings as chips; tap to expand one */}
       {brief && brief.items.length > 0 && (
+        <View style={styles.chipsWrap}>
+          {brief.items.map((item) => {
+            const selected = item.kind === expandedKind;
+            return (
+              <Pressable
+                key={item.kind}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: selected }}
+                onPress={() => setExpandedKind(selected ? null : item.kind)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: selected ? theme.backgroundSelected : theme.surface,
+                    borderColor: theme.border,
+                  },
+                ]}>
+                <ThemedText type="small">
+                  {KIND_ICON[item.kind]} {item.chip}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+      {expanded && (
         <Card>
-          <CardTitle>ほかの気づき</CardTitle>
-          {brief.items.map((item) => (
-            <View key={item.kind} style={styles.itemRow}>
-              <ThemedText style={styles.itemIcon}>{KIND_ICON[item.kind]}</ThemedText>
-              <View style={styles.itemText}>
-                <ThemedText type="small">{item.message}</ThemedText>
-                {item.detail && (
-                  <ThemedText type="small" themeColor="textMuted">
-                    {item.detail}
-                  </ThemedText>
-                )}
-              </View>
-            </View>
-          ))}
+          <ThemedText type="small">{expanded.message}</ThemedText>
+          {expanded.detail && (
+            <ThemedText type="small" themeColor="textSecondary">
+              {expanded.detail}
+            </ThemedText>
+          )}
         </Card>
       )}
 
@@ -151,8 +209,8 @@ export default function HomeScreen() {
         <View style={styles.miniRow}>
           <MiniStat label="体重" value={formatValue(insight.latest?.value, 1)} unit="kg" />
           <MiniStat label="今日の歩数" value={formatValue(stepsToday, 0)} unit="歩" />
-          <MiniStat label="昨夜の睡眠" value={formatValue(latest(sleep.data), 1)} unit="h" />
-          <MiniStat label="安静時心拍" value={formatValue(latest(heart.data), 0)} unit="bpm" />
+          <MiniStat label="昨夜の睡眠" value={formatValue(sleepLastNight, 1)} unit="h" />
+          <MiniStat label="安静時心拍" value={formatValue(heartRecent, 0)} unit="bpm" />
         </View>
       </Card>
 
@@ -169,27 +227,50 @@ const styles = StyleSheet.create({
   header: {
     gap: Spacing.half,
   },
-  heroCard: {
-    gap: Spacing.two,
-    paddingVertical: Spacing.four,
-  },
-  heroText: {
-    fontSize: 20,
-    lineHeight: 31,
-    fontWeight: 600,
-  },
-  itemRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
+  hero: {
     alignItems: 'flex-start',
+    gap: Spacing.one,
+    paddingVertical: Spacing.two,
   },
-  itemIcon: {
-    fontSize: 16,
-    lineHeight: 22,
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: Spacing.one,
   },
-  itemText: {
-    flex: 1,
-    gap: 2,
+  heroValue: {
+    fontSize: 56,
+    lineHeight: 62,
+    fontWeight: 700,
+  },
+  heroUnit: {
+    fontSize: 18,
+  },
+  heroArrow: {
+    fontSize: 40,
+    lineHeight: 48,
+    fontWeight: 700,
+    marginLeft: Spacing.one,
+  },
+  pacePill: {
+    borderRadius: 999,
+    paddingHorizontal: Spacing.two + 2,
+    paddingVertical: 3,
+  },
+  headline: {
+    marginTop: Spacing.two,
+    fontSize: 15,
+    lineHeight: 23,
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  chip: {
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: Spacing.two + 4,
+    paddingVertical: 6,
   },
   chartHeader: {
     flexDirection: 'row',
