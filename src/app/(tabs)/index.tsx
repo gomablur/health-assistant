@@ -15,7 +15,7 @@ import { isMockSource } from '@/health';
 import type { DailyPoint } from '@/health/types';
 import { useHealthDaily } from '@/health/useHealthDaily';
 import { useTheme } from '@/hooks/use-theme';
-import { addDays, todayISO } from '@/utils/date';
+import { addDays, dayIndex, todayISO } from '@/utils/date';
 import { formatValue } from '@/utils/format';
 
 /**
@@ -64,21 +64,32 @@ function paceVisual(pace: Pace): { arrow: string; colorKey: 'deltaGood' | 'delta
   }
 }
 
-/** 最終計測が十分新しい(今日から maxAgeDays 以内)場合のみ値を返す。古ければ「未計測」扱い。 */
-function fresh(points: DailyPoint[] | null, maxAgeDays: number): number | null {
+/** 最終計測が十分新しい(今日から maxAgeDays 以内)場合のみその点を返す。古ければ「未計測」扱い。 */
+function freshPoint(points: DailyPoint[] | null, maxAgeDays: number): DailyPoint | null {
   if (!points || points.length === 0) return null;
   const last = points[points.length - 1];
-  return last.date >= addDays(todayISO(), -maxAgeDays) ? last.value : null;
+  return last.date >= addDays(todayISO(), -maxAgeDays) ? last : null;
+}
+
+/** 計測日の相対表記。「いつのデータかわからない」を防ぐためミニ統計に必ず添える。 */
+function relativeDay(iso: string): string {
+  const diff = dayIndex(todayISO()) - dayIndex(iso);
+  if (diff <= 0) return '今日';
+  if (diff === 1) return '昨日';
+  return `${diff}日前`;
 }
 
 function MiniStat({
   label,
   value,
   unit,
+  when,
 }: {
   label: string;
   value: string | null;
   unit: string;
+  /** 計測タイミングの表示(今日/昨日/N日前/昨夜)。未計測時は null */
+  when: string | null;
 }) {
   return (
     <View style={styles.miniStat}>
@@ -95,6 +106,11 @@ function MiniStat({
           </ThemedText>
         )}
       </View>
+      {value != null && when != null && (
+        <ThemedText style={styles.miniWhen} themeColor="textMuted">
+          {when}
+        </ThemedText>
+      )}
     </View>
   );
 }
@@ -118,10 +134,11 @@ export default function HomeScreen() {
   const today = new Date();
   const dateLabel = `${today.getMonth() + 1}月${today.getDate()}日 (${'日月火水木金土'[today.getDay()]})`;
 
-  // 鮮度条件: 睡眠は起床日に帰属するので「昨夜の睡眠」は今日の日付でなければならない
-  const sleepLastNight = fresh(sleep.data, 0);
-  const heartRecent = fresh(heart.data, 1);
-  const stepsToday = fresh(steps.data, 0);
+  // 鮮度条件: 睡眠は起床日に帰属するので「昨夜の睡眠」は今日の日付でなければならない。
+  // 体重と心拍は計測日を明示する代わりに、多少古くても表示する
+  const sleepLastNight = freshPoint(sleep.data, 0);
+  const heartRecent = freshPoint(heart.data, 6);
+  const stepsToday = freshPoint(steps.data, 0);
 
   const expanded = brief?.items.find((i) => i.kind === expandedKind) ?? null;
 
@@ -215,10 +232,30 @@ export default function HomeScreen() {
 
       <Card>
         <View style={styles.miniRow}>
-          <MiniStat label="体重" value={formatValue(insight.latest?.value, 1)} unit="kg" />
-          <MiniStat label="今日の歩数" value={formatValue(stepsToday, 0)} unit="歩" />
-          <MiniStat label="昨夜の睡眠" value={formatValue(sleepLastNight, 1)} unit="h" />
-          <MiniStat label="安静時心拍" value={formatValue(heartRecent, 0)} unit="bpm" />
+          <MiniStat
+            label="体重"
+            value={formatValue(insight.latest?.value, 1)}
+            unit="kg"
+            when={insight.latest ? relativeDay(insight.latest.date) : null}
+          />
+          <MiniStat
+            label="歩数"
+            value={formatValue(stepsToday?.value, 0)}
+            unit="歩"
+            when={stepsToday ? '今日' : null}
+          />
+          <MiniStat
+            label="睡眠"
+            value={formatValue(sleepLastNight?.value, 1)}
+            unit="h"
+            when={sleepLastNight ? '昨夜' : null}
+          />
+          <MiniStat
+            label="安静時心拍"
+            value={formatValue(heartRecent?.value, 0)}
+            unit="bpm"
+            when={heartRecent ? relativeDay(heartRecent.date) : null}
+          />
         </View>
       </Card>
 
@@ -302,6 +339,10 @@ const styles = StyleSheet.create({
   },
   miniValue: {
     fontSize: 17,
+  },
+  miniWhen: {
+    fontSize: 11,
+    lineHeight: 14,
   },
   mockNote: {
     textAlign: 'center',

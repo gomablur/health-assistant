@@ -86,18 +86,18 @@ export default function OnboardingScreen() {
               {errorMessage ?? '権限が許可されませんでした。あとから設定画面で再リクエストできます。'}
             </ThemedText>
           )}
+          {/* ボタン文言は短く保つ(iOSのSwiftUIボタンは長文で画面からはみ出す)。
+              権限の説明は下のキャプションで補う */}
           <Button
-            title={
-              isMockSource()
-                ? 'はじめる(モックデータ)'
-                : `${permissionTarget}へのアクセスを許可してはじめる`
-            }
+            title={isMockSource() ? 'はじめる(モックデータ)' : 'はじめる'}
             onPress={start}
             loading={requesting}
           />
           {denied && <Button title="許可せずに続ける" variant="secondary" onPress={finish} />}
           <ThemedText type="small" themeColor="textMuted" style={styles.center}>
-            データの読み取りのみ行い、分析は端末内で完結します。
+            {isMockSource()
+              ? 'モックデータで全機能を試せます。'
+              : `タップすると${permissionTarget}への読み取り許可を求めます。分析は端末内で完結します。`}
           </ThemedText>
         </View>
       </SafeAreaView>

@@ -43,14 +43,13 @@ export function StatTile({ label, value, unit, delta, trend, accent }: StatTileP
       </View>
       <View style={styles.footRow}>
         {delta ? (
-          <ThemedText type="small" style={{ color: deltaColor }}>
+          // デルタ文言を優先し、余った幅にスパークラインが収まる(足りなければ非表示)
+          <ThemedText type="small" style={{ color: deltaColor, flexShrink: 0 }}>
             {delta.value >= 0 ? '+' : ''}
             {delta.value}
             {delta.suffix ?? ''} {delta.vs}
           </ThemedText>
-        ) : (
-          <View />
-        )}
+        ) : null}
         {trend && trend.length >= 2 ? <Sparkline points={trend} accent={accent} /> : null}
       </View>
     </Card>
@@ -77,6 +76,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    gap: Spacing.two,
     minHeight: 28,
   },
 });
