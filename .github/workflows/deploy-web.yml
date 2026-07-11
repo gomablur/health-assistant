@@ -20,6 +20,11 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Cloudflareのトークンは Environment 'mock-web' の Secrets に登録している。
+    # この宣言がないとEnvironmentのSecretsは読めない(空のまま渡って失敗する)
+    environment:
+      name: mock-web
+      url: ${{ steps.deploy.outputs.deployment-url }}
     steps:
       - uses: actions/checkout@v5
 
@@ -37,7 +42,8 @@ jobs:
 
       - run: npm run build:web # dist/ に静的サイトを出力(モックデータ有効)
 
-      - uses: cloudflare/wrangler-action@v3
+      - uses: cloudflare/wrangler-action@v4
+        id: deploy # 公開URLを Environment のリンクとして表示するため
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
