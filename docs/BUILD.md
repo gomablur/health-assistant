@@ -40,8 +40,12 @@ npm run device:ios
 
 ```bash
 git pull
-npx expo start   # Metro を起動
+npm start   # Metro を起動(--dev-client モード: QR や 'a' キーが Expo Go ではなく本アプリを開く)
 ```
+
+> **Expo Go は使えません**。HealthKit / Health Connect のネイティブモジュールが
+> Expo Go には含まれていないためです。必ずホーム画面の health-assistant アイコン
+> (`device:ios` / `device:android` でインストールしたビルド)から起動してください。
 
 実機にインストール済みの health-assistant(dev client)を開くと、
 同一 LAN 上の Metro に接続され、JS の変更は即時反映されます。
