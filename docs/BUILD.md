@@ -92,6 +92,7 @@ USB 接続でローカルに Release を焼くだけなら `npm run standalone:a
 
 | 症状 | 対処 |
 |---|---|
+| Android: スプラッシュで固まる | Metroが LAN IP(`192.168.x.x:8081`)を指しており、端末から到達できていない。`npm run start:usb`(= `expo start --localhost`)+ `adb reverse tcp:8081 tcp:8081` でUSB経由に切り替える |
 | ヘルスデータが全部空 | 設定アプリ > ヘルスケア > データアクセスとデバイス > health-assistant で読み取りが許可されているか確認 |
 | 「モックデータを表示中」と出る | dev client ではなく Expo Go で開いている。ホーム画面のアプリアイコンから起動する |
 | 7日経って起動しない | 無料署名の失効。`npm run device:ios`(または `npm run standalone:ios`)で再署名 |
