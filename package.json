@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest",
     "typecheck": "tsc --noEmit",
+    "icons": "node scripts/gen-icons.mjs",
     "start": "expo start --dev-client",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
