@@ -9,13 +9,13 @@ import { useTheme } from '@/hooks/use-theme';
 
 export interface StatTileProps {
   label: string;
-  /** already formatted (e.g. '72.4') — null renders a placeholder */
+  /** フォーマット済み文字列(例 '72.4')。null ならプレースホルダ表示 */
   value: string | null;
   unit?: string;
-  /** signed change vs a named period */
+  /** 比較対象期間に対する符号付き変化量 */
   delta?: { value: number; suffix?: string; vs: string; upIsGood: boolean } | null;
   trend?: DailyPoint[];
-  /** series color for the sparkline end dot */
+  /** スパークラインの終端ドットに使う系列色 */
   accent?: string;
 }
 

@@ -4,6 +4,7 @@ import { type ComponentProps } from 'react';
 
 type Props = Omit<ComponentProps<typeof Link>, 'href'> & { href: Href & string };
 
+/** 外部リンク: ネイティブではアプリ内ブラウザで開く(Webは通常の新規タブ)。 */
 export function ExternalLink({ href, ...rest }: Props) {
   return (
     <Link
@@ -12,9 +13,9 @@ export function ExternalLink({ href, ...rest }: Props) {
       href={href}
       onPress={async (event) => {
         if (process.env.EXPO_OS !== 'web') {
-          // Prevent the default behavior of linking to the default browser on native.
+          // ネイティブで標準ブラウザに飛ぶデフォルト動作を止め、
           event.preventDefault();
-          // Open the link in an in-app browser.
+          // アプリ内ブラウザで開く
           await openBrowserAsync(href, {
             presentationStyle: WebBrowserPresentationStyle.AUTOMATIC,
           });

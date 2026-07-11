@@ -3,6 +3,12 @@ import { create } from 'zustand';
 
 import { deleteSecret, getSecret, setSecret } from '@/utils/secure-storage';
 
+/**
+ * アプリ設定のグローバルストア(zustand)。通常の設定はAsyncStorage、
+ * APIキーだけはセキュアストレージに永続化する。起動時に hydrateSettings() で
+ * 読み戻すまで hydrated=false(その間はスプラッシュが画面を覆っている)。
+ */
+
 const K_ONBOARDED = 'settings.onboarded';
 const K_GEMINI_KEY = 'secret.geminiApiKey';
 
@@ -30,7 +36,7 @@ export const useSettings = create<SettingsState>((set) => ({
 
 let hydrating: Promise<void> | null = null;
 
-/** Load persisted settings once at app start (idempotent). */
+/** 永続化済み設定をアプリ起動時に一度だけ読み込む(冪等)。 */
 export function hydrateSettings(): Promise<void> {
   hydrating ??= (async () => {
     const [onboarded, key] = await Promise.all([

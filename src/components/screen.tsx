@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, type ScrollViewProps } from 'react-native';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Scrollable page container: page background, centered max-width column. */
+/** スクロール可能なページコンテナ: ページ背景+中央寄せの最大幅カラム。 */
 export function Screen({ children, contentContainerStyle, ...rest }: ScrollViewProps) {
   const theme = useTheme();
   return (

@@ -12,7 +12,7 @@ interface Props {
   raw: DailyPoint[];
   smoothed: DailyPoint[];
   height?: number;
-  /** value unit shown in the tooltip (default kg) */
+  /** ツールチップに表示する単位(既定: kg) */
   unit?: string;
   digits?: number;
 }
@@ -21,8 +21,8 @@ const CHART_HEIGHT = 220;
 const Y_LABEL_WIDTH = 36;
 
 /**
- * Weight over time: raw measurements as de-emphasized dots, the 7-day moving
- * average as the 2px story line, crosshair tooltip on touch/hover.
+ * 体重の推移チャート: 実測値は控えめなドット、7日移動平均を2pxの主役ラインで
+ * 描き、タッチ/ホバーで十字カーソル+ツールチップを出す。
  */
 export function WeightTrendChart({
   raw,
@@ -69,13 +69,13 @@ export function WeightTrendChart({
           data2={data2}
           height={height}
           width={plotWidth}
-          // raw series: dots only
+          // 実測系列: ドットのみ(線は描かない)
           color="transparent"
           thickness={0}
           hideDataPoints={false}
           dataPointsColor={theme.seriesWeightSoft}
           dataPointsRadius={2.5}
-          // smoothed series: the 2px story line
+          // 移動平均系列: 2pxの主役ライン
           color2={theme.seriesWeight}
           thickness2={2}
           hideDataPoints2
@@ -123,7 +123,7 @@ export function WeightTrendChart({
           }}
         />
       )}
-      {/* legend: two series, identity never by color alone */}
+      {/* 凡例: 2系列。色だけに頼らず形(ドット/ライン)でも区別する */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.seriesWeightSoft }]} />

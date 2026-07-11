@@ -10,7 +10,7 @@ import { addDays, formatMonthDay, todayISO } from '@/utils/date';
 
 interface Props {
   points: DailyPoint[];
-  /** trailing days to show (missing days render as gaps with 0 height) */
+  /** 表示する直近日数(未計測日は高さ0の隙間として描画) */
   days: number;
   color: string;
   unit: string;
@@ -20,7 +20,7 @@ interface Props {
 
 const Y_LABEL_WIDTH = 40;
 
-/** Daily magnitude bars: 4px rounded data-end, per-bar tap/hover tooltip. */
+/** 日次量のバーチャート: 角丸4pxのバー、タップ/ホバーでツールチップ。 */
 export function DailyBarChart({ points, days, color, unit, digits = 0, height = 160 }: Props) {
   const theme = useTheme();
   const [width, setWidth] = useState(0);
@@ -40,7 +40,7 @@ export function DailyBarChart({ points, days, color, unit, digits = 0, height = 
   });
 
   const plotWidth = Math.max(0, width - Y_LABEL_WIDTH - Spacing.two);
-  // 2px surface gap minimum between adjacent bars; bars capped at 24px
+  // 隣接バー間は最低2pxの隙間、バー幅は最大24px
   const barWidth = Math.min(24, Math.max(3, Math.floor(plotWidth / days) - 2));
   const spacing = Math.max(2, (plotWidth - barWidth * days) / days);
 

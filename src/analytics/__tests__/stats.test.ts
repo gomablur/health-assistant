@@ -13,8 +13,8 @@ const pts = (entries: [string, number][]): DailyPoint[] =>
   entries.map(([date, value]) => ({ date, value }));
 
 describe('movingAverage', () => {
-  it('averages over a calendar window, not a point count', () => {
-    // gap between 01-02 and 01-05: the window must drop out-of-range days
+  it('点数ではなく暦日ウィンドウで平均する', () => {
+    // 01-02と01-05の間に欠測: ウィンドウ外の日は平均から落ちること
     const series = pts([
       ['2026-01-01', 70],
       ['2026-01-02', 72],
@@ -23,10 +23,10 @@ describe('movingAverage', () => {
     const ma = movingAverage(series, 3);
     expect(ma[0].value).toBe(70);
     expect(ma[1].value).toBe(71); // (70+72)/2
-    expect(ma[2].value).toBe(74); // 01-03..01-05 window contains only 01-05
+    expect(ma[2].value).toBe(74); // 01-03..01-05 のウィンドウに含まれるのは01-05のみ
   });
 
-  it('equals the plain mean when the window covers everything', () => {
+  it('ウィンドウが全体を覆うなら単純平均と一致する', () => {
     const series = pts([
       ['2026-01-01', 1],
       ['2026-01-02', 2],
@@ -37,7 +37,7 @@ describe('movingAverage', () => {
 });
 
 describe('ewma', () => {
-  it('starts at the first value and moves toward new values', () => {
+  it('最初の値から始まり、新しい値の方向へ動く', () => {
     const series = pts([
       ['2026-01-01', 70],
       ['2026-01-02', 71],
@@ -48,17 +48,17 @@ describe('ewma', () => {
     expect(out[1].value).toBeLessThan(71);
   });
 
-  it('decays by half after one half-life gap', () => {
+  it('半減期ぶんの間隔が空くと半分まで減衰する', () => {
     const series = pts([
       ['2026-01-01', 100],
-      ['2026-01-08', 0], // 7 days later, half-life 7
+      ['2026-01-08', 0], // 7日後、半減期7日
     ]);
     expect(ewma(series, 7)[1].value).toBeCloseTo(50);
   });
 });
 
 describe('linearTrend', () => {
-  it('recovers a perfect linear slope', () => {
+  it('完全な直線の傾きを復元する', () => {
     const series = pts([
       ['2026-01-01', 70.0],
       ['2026-01-02', 69.9],
@@ -72,31 +72,31 @@ describe('linearTrend', () => {
     expect(t.fittedEnd).toBeCloseTo(69.7);
   });
 
-  it('handles gaps by regressing on calendar days', () => {
+  it('欠測があっても暦日ベースで回帰する', () => {
     const series = pts([
       ['2026-01-01', 70],
-      ['2026-01-11', 71], // +1kg over 10 days = 0.1/day
+      ['2026-01-11', 71], // 10日で+1kg = 0.1/日
       ['2026-01-21', 72],
     ]);
     expect(linearTrend(series)!.slopePerDay).toBeCloseTo(0.1);
   });
 
-  it('returns null when under 3 points', () => {
+  it('3点未満ならnullを返す', () => {
     expect(linearTrend(pts([['2026-01-01', 70], ['2026-01-02', 71]]))).toBeNull();
   });
 });
 
 describe('pearson / correlateDaily', () => {
-  it('finds perfect positive and negative correlation', () => {
+  it('完全な正・負の相関を検出する', () => {
     expect(pearson([1, 2, 3], [2, 4, 6])).toBeCloseTo(1);
     expect(pearson([1, 2, 3], [6, 4, 2])).toBeCloseTo(-1);
   });
 
-  it('returns null on zero variance', () => {
+  it('分散ゼロならnullを返す', () => {
     expect(pearson([1, 1, 1], [2, 4, 6])).toBeNull();
   });
 
-  it('aligns by date and applies lag', () => {
+  it('日付で対応づけ、ラグを適用する', () => {
     const a = pts([
       ['2026-01-02', 10],
       ['2026-01-03', 20],
@@ -109,13 +109,13 @@ describe('pearson / correlateDaily', () => {
       ['2026-01-03', 3],
       ['2026-01-04', 4],
     ]);
-    // with lag 1, a[d] pairs with b[d-1] → perfectly correlated
+    // ラグ1では a[d] と b[d-1] がペアになる → 完全相関
     const c = correlateDaily(a, b, 1)!;
     expect(c.r).toBeCloseTo(1);
     expect(c.n).toBe(4);
   });
 
-  it('skips dates with no partner', () => {
+  it('相手のいない日付はスキップする', () => {
     const a = pts([
       ['2026-01-01', 1],
       ['2026-01-02', 2],
@@ -132,18 +132,18 @@ describe('pearson / correlateDaily', () => {
 });
 
 describe('helpers', () => {
-  it('mean of empty is null', () => {
+  it('空配列のmeanはnull', () => {
     expect(mean([])).toBeNull();
     expect(mean([2, 4])).toBe(3);
   });
 
-  it('lastDays takes a trailing inclusive window', () => {
+  it('lastDaysは末尾からの両端含むウィンドウを取る', () => {
     const series = pts([
       ['2026-01-01', 1],
       ['2026-01-05', 5],
       ['2026-01-07', 7],
     ]);
-    const window = lastDays(series, 3, '2026-01-07'); // 01-05..01-07
+    const window = lastDays(series, 3, '2026-01-07'); // 01-05..01-07 の3日間
     expect(window.map((p) => p.value)).toEqual([5, 7]);
   });
 });

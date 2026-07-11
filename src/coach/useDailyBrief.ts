@@ -8,9 +8,9 @@ import { buildDailyBrief, type BriefKind, type DailyBrief } from './briefing';
 const K_HEADLINES = 'brief.headlineKinds'; // { [dateISO]: BriefKind }
 
 /**
- * Today's brief from local statistics. Remembers which kind headlined
- * yesterday (AsyncStorage) so two mornings in a row never open with the
- * same message type.
+ * ローカル統計から今日のブリーフを組み立てるフック。
+ * 昨日どの種類がヘッドラインだったかをAsyncStorageに覚えておき、
+ * 2朝連続で同じ種類のメッセージから始まらないようにする。
  */
 export function useDailyBrief(): { brief: DailyBrief | null; loading: boolean } {
   const weight = useHealthDaily('weight', 90);
@@ -50,7 +50,7 @@ export function useDailyBrief(): { brief: DailyBrief | null; loading: boolean } 
     );
   }, [ready, weight.data, steps.data, sleep.data, heart.data, recentKinds]);
 
-  // remember today's headline kind for tomorrow's dedup (keep 3 days)
+  // 今日のヘッドライン種類を明日の重複回避用に保存(保持は3日分)
   useEffect(() => {
     if (!brief) return;
     const today = todayISO();

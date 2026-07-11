@@ -1,8 +1,10 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 /**
- * Native tab bar: Liquid Glass on iOS 26, Material 3 on Android.
- * Web uses the JS implementation in app-tabs.web.tsx instead.
+ * OSネイティブのタブバー: iOS 26ではLiquid Glass、AndroidではMaterial 3。
+ * WebはJS実装(app-tabs.web.tsx)を使う。
+ * 注意: ネイティブタブは自前のヘッダーを持たないため、ヘッダーはルートの
+ * Stack(src/app/_layout.tsx)が提供している。
  */
 export default function AppTabs() {
   return (

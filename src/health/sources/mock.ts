@@ -2,13 +2,13 @@ import { addDays, dayIndex, fromISODate, todayISO } from '@/utils/date';
 import type { DailyPoint, HealthDataSource, MetricType } from '../types';
 
 /**
- * Deterministic mock data for development in environments without HealthKit /
- * Health Connect (web preview, Expo Go, simulators). Generates a year of
- * plausible data: weight drifts slowly with weekend bumps and skipped days,
- * steps follow a weekday pattern, sleep and heart rate stay in realistic bands.
+ * HealthKit / Health Connect のない環境(Webプレビュー・Expo Go・シミュレータ)
+ * 向けの決定論的モックデータ。1年強のそれっぽいデータを生成する:
+ * 体重はゆっくりドリフト+週末の増加+計測抜け、歩数は曜日パターン、
+ * 睡眠・心拍は現実的な帯に収まる。
  */
 
-/** mulberry32 — small seeded PRNG so every reload shows the same data. */
+/** mulberry32 — 小さなシード付き乱数。リロードしても毎回同じデータになる。 */
 function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -20,7 +20,7 @@ function rng(seed: number): () => number {
   };
 }
 
-/** Approx standard normal via sum of uniforms. */
+/** 一様乱数の和による標準正規分布の近似。 */
 function gauss(rand: () => number): number {
   return rand() + rand() + rand() + rand() + rand() + rand() - 3;
 }
@@ -35,16 +35,16 @@ function generate(metric: MetricType): DailyPoint[] {
 
   for (let i = 0; i < HISTORY_DAYS; i++) {
     const date = addDays(start, i);
-    const dow = fromISODate(date).getDay(); // 0 = Sun
+    const dow = fromISODate(date).getDay(); // 0 = 日曜
     const t = dayIndex(date);
     const seasonal = Math.sin((t % 365) / 365 * 2 * Math.PI);
 
     let value: number | null = null;
     switch (metric) {
       case 'weight': {
-        if (rand() < 0.08) break; // skipped a morning
-        const drift = -0.0015 * i; // slow loss over the year
-        const weekend = dow === 0 || dow === 1 ? 0.25 : 0; // Sun/Mon after weekend
+        if (rand() < 0.08) break; // 朝の計測をサボった日
+        const drift = -0.0015 * i; // 1年かけてゆっくり減少
+        const weekend = dow === 0 || dow === 1 ? 0.25 : 0; // 週末明けの日・月は増える
         value = 72.4 + drift + 0.5 * seasonal + weekend + 0.35 * gauss(rand);
         value = Math.round(value * 10) / 10;
         break;
@@ -52,7 +52,7 @@ function generate(metric: MetricType): DailyPoint[] {
       case 'steps': {
         const base = dow === 0 ? 5200 : dow === 6 ? 9800 : 7600;
         value = Math.max(1200, Math.round(base * (1 + 0.35 * gauss(rand))));
-        if (rand() < 0.03) value += 8000; // occasional long walk
+        if (rand() < 0.03) value += 8000; // たまの遠出
         break;
       }
       case 'restingHeartRate': {
@@ -60,7 +60,7 @@ function generate(metric: MetricType): DailyPoint[] {
         break;
       }
       case 'sleep': {
-        const base = dow === 6 || dow === 0 ? 7.7 : 6.7; // longer on weekend nights
+        const base = dow === 6 || dow === 0 ? 7.7 : 6.7; // 週末の夜は長め
         value = Math.round(Math.min(10, Math.max(4, base + 0.6 * gauss(rand))) * 10) / 10;
         break;
       }
@@ -70,8 +70,8 @@ function generate(metric: MetricType): DailyPoint[] {
         break;
       }
       case 'bodyFat': {
-        if (rand() < 0.12) break; // measured slightly less often than weight
-        const drift = -0.004 * i; // slow recomposition over the year
+        if (rand() < 0.12) break; // 体重よりやや計測頻度が低い
+        const drift = -0.004 * i; // 1年かけてゆっくり体組成改善
         value = Math.round((22.5 + drift + 0.3 * seasonal + 0.45 * gauss(rand)) * 10) / 10;
         break;
       }

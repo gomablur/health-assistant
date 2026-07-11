@@ -2,9 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 /**
- * Secret storage: Keychain / Keystore via expo-secure-store on device.
- * SecureStore has no web implementation, so web (mock development) falls back
- * to AsyncStorage — acceptable because web builds only ever see mock data.
+ * シークレット保管: 実機では expo-secure-store 経由で Keychain / Keystore に保存。
+ * SecureStoreにはWeb実装がないため、Web(モック開発環境)はAsyncStorageに
+ * フォールバックする — Webビルドはモックデータしか扱わないので許容。
  */
 
 async function secureStore() {

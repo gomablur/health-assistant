@@ -1,14 +1,15 @@
-import { assessPace, weightInsight } from '@/analytics/insights';
-import { correlateDaily, ewma, lastDays, mean } from '@/analytics/stats';
+import { assessPace, stepsWeightLink, weightInsight } from '@/analytics/insights';
+import { ewma, lastDays, mean } from '@/analytics/stats';
 import type { DailyPoint } from '@/health/types';
 import { addDays, dayIndex, todayISO } from '@/utils/date';
 
 /**
- * The daily brief: what the user used to get by screenshotting the Health app
- * into an LLM every morning, computed locally instead. Pure functions — rules
- * look at the series, emit prioritized findings, and the top one becomes the
- * headline. Event-driven rules (something changed today) outrank status
- * reports so the brief doesn't repeat itself day after day.
+ * デイリーブリーフ: かつて毎朝ヘルスケアのスクショをLLMに投げて得ていたものを、
+ * 端末内の統計で置き換えたもの(このアプリの核)。純粋関数のみで構成。
+ *
+ * 仕組み: 各ルールが系列を見て優先度付きの「所見(finding)」を出し、最上位が
+ * ヘッドラインになる。「今日何かが変わった」系のイベントルールを現状報告より
+ * 高優先度にすることで、毎日同じことを言うブリーフにならないようにしている。
  */
 
 export type BriefKind =
@@ -28,10 +29,10 @@ export type BriefKind =
 export interface BriefFinding {
   kind: BriefKind;
   priority: number;
-  /** chip label for compact display (≤6 chars) */
+  /** コンパクト表示用のチップラベル(6文字以内目安) */
   chip: string;
   message: string;
-  /** optional supporting sentence */
+  /** 補足の一文(チップ展開時に表示) */
   detail?: string;
 }
 
@@ -50,7 +51,7 @@ export interface BriefSeries {
 const kg = (v: number) => `${v.toFixed(1)}kg`;
 const signed = (v: number, digits = 1) => `${v >= 0 ? '+' : ''}${v.toFixed(digits)}`;
 
-/** deterministic per-day pick so phrasing rotates instead of repeating */
+/** 日替わりシードで言い回しをローテーションさせる(同じ文の繰り返しを避ける) */
 function pick(templates: string[], seed: number): string {
   return templates[seed % templates.length];
 }
@@ -59,9 +60,9 @@ function lastValue(points: DailyPoint[]): DailyPoint | null {
   return points.length > 0 ? points[points.length - 1] : null;
 }
 
-// --- rules -----------------------------------------------------------------
+// --- ルール -----------------------------------------------------------------
 
-/** Yesterday's scale jump that the trend says is just noise — the #1 morning question. */
+/** 昨日からの体重ジャンプがトレンド的にはノイズ、という毎朝一番多い疑問への回答。 */
 function weightNoise(weight: DailyPoint[], seed: number): BriefFinding | null {
   if (weight.length < 8) return null;
   const latest = weight[weight.length - 1];
@@ -75,7 +76,7 @@ function weightNoise(weight: DailyPoint[], seed: number): BriefFinding | null {
   const trendNow = smoothed[smoothed.length - 1].value;
   const trendPrev = smoothed[smoothed.length - 2].value;
   const deltaTrend = trendNow - trendPrev;
-  if (Math.abs(deltaTrend) > 0.15) return null; // the trend actually moved
+  if (Math.abs(deltaTrend) > 0.15) return null; // トレンド自体が動いた場合はノイズ扱いしない
 
   const direction = deltaRaw > 0 ? '増え' : '減り';
   return {
@@ -93,10 +94,11 @@ function weightNoise(weight: DailyPoint[], seed: number): BriefFinding | null {
   };
 }
 
-/** Consecutive weeks of the smoothed trend moving one direction. */
+/** トレンド体重が同方向に動き続けている連続週数。 */
 function weightStreak(weight: DailyPoint[], seed: number): BriefFinding | null {
   const smoothed = ewma(weight, 7);
   if (smoothed.length < 15) return null;
+  // daysAgo日前(以前)の直近のトレンド値
   const at = (daysAgo: number): number | null => {
     const target = dayIndex(smoothed[smoothed.length - 1].date) - daysAgo;
     let best: DailyPoint | null = null;
@@ -142,13 +144,13 @@ function weightStreak(weight: DailyPoint[], seed: number): BriefFinding | null {
   };
 }
 
-/** Losing/gaining faster than the healthy bound. */
+/** 健康的な目安(週0.5kg)を超える増減ペースの警告。 */
 function weightPaceFast(weight: DailyPoint[]): BriefFinding | null {
   const insight = weightInsight(weight);
   if (insight.slopePerWeek == null || insight.trendR2 == null) return null;
   const pace = assessPace(insight.slopePerWeek);
   if (pace !== 'losing-fast' && pace !== 'gaining-fast') return null;
-  if (insight.trendR2 < 0.3) return null; // noisy fit, don't alarm
+  if (insight.trendR2 < 0.3) return null; // フィットがノイズだらけなら騒がない
   const word = insight.slopePerWeek < 0 ? '減少' : '増加';
   return {
     kind: 'weight-pace-fast',
@@ -159,15 +161,15 @@ function weightPaceFast(weight: DailyPoint[]): BriefFinding | null {
   };
 }
 
-/** Streak of consecutive measurement days (praise at week milestones). */
+/** 計測の連続日数(週の節目で称賛)/ 数日空いたら軽い後押し。 */
 function adherence(weight: DailyPoint[], seed: number): BriefFinding | null {
   if (weight.length === 0) return null;
   const today = todayISO();
   const byDate = new Set(weight.map((p) => p.date));
-  // allow the streak to be anchored at today or yesterday (before the morning weigh-in)
+  // ストリークの起点は今日または昨日(朝の計測前でも途切れ扱いにしない)
   let anchor = byDate.has(today) ? today : addDays(today, -1);
   if (!byDate.has(anchor)) {
-    // gap: how many days since the last measurement?
+    // 途切れている: 最後の計測から何日空いたか
     const last = lastValue(weight)!;
     const gap = dayIndex(today) - dayIndex(last.date);
     if (gap >= 3) {
@@ -201,9 +203,9 @@ function adherence(weight: DailyPoint[], seed: number): BriefFinding | null {
   };
 }
 
-/** The watch hasn't recorded sleep for a couple of nights (forgot to wear / charge). */
+/** 数日間、睡眠が記録されていない(Watchの着け忘れ・充電切れ)。 */
 function sleepGap(sleep: DailyPoint[]): BriefFinding | null {
-  if (sleep.length < 5) return null; // only meaningful for someone who usually measures
+  if (sleep.length < 5) return null; // 普段から計測している人にだけ意味がある
   const last = sleep[sleep.length - 1];
   const gap = dayIndex(todayISO()) - dayIndex(last.date);
   if (gap < 2) return null;
@@ -216,11 +218,12 @@ function sleepGap(sleep: DailyPoint[]): BriefFinding | null {
   };
 }
 
-/** Three or more consecutive short nights. */
+/** 短時間睡眠が3日以上連続。 */
 function sleepDeficit(sleep: DailyPoint[]): BriefFinding | null {
   if (sleep.length < 3) return null;
   const recent = sleep.slice(-3);
   const today = todayISO();
+  // 古いデータで警告しない(直近の記録が今日か昨日のときだけ)
   if (dayIndex(today) - dayIndex(recent[recent.length - 1].date) > 1) return null;
   if (!recent.every((p) => p.value < 6)) return null;
   const avg = mean(recent.map((p) => p.value))!;
@@ -233,7 +236,7 @@ function sleepDeficit(sleep: DailyPoint[]): BriefFinding | null {
   };
 }
 
-/** Resting heart rate sitting above the personal baseline. */
+/** 安静時心拍が本人のベースラインより高止まりしている。 */
 function heartElevated(heart: DailyPoint[]): BriefFinding | null {
   if (heart.length < 14) return null;
   const today = todayISO();
@@ -252,7 +255,7 @@ function heartElevated(heart: DailyPoint[]): BriefFinding | null {
   };
 }
 
-/** Yesterday was a big walking day / the weekly average is sliding. */
+/** 昨日たくさん歩いた / 週平均が下がってきている。 */
 function stepsChange(steps: DailyPoint[], seed: number): BriefFinding | null {
   if (steps.length < 14) return null;
   const today = todayISO();
@@ -288,33 +291,22 @@ function stepsChange(steps: DailyPoint[], seed: number): BriefFinding | null {
   return null;
 }
 
-/** Weekly correlation nugget (weekends only, needs a real signal). */
+/** 週1回(日曜)の相関の小ネタ。確かな信号があるときだけ。 */
 function correlation(weight: DailyPoint[], steps: DailyPoint[]): BriefFinding | null {
-  const today = new Date();
-  if (today.getDay() !== 0) return null; // Sundays: reflection day
-  const deltas: DailyPoint[] = [];
-  for (let i = 1; i < weight.length; i++) {
-    deltas.push({ date: weight[i].date, value: weight[i].value - weight[i - 1].value });
-  }
-  let best: { r: number; lag: number; n: number } | null = null;
-  for (let lag = 0; lag <= 7; lag++) {
-    const c = correlateDaily(deltas, steps, lag);
-    if (c && c.n >= 21 && (!best || Math.abs(c.r) > Math.abs(best.r))) {
-      best = { r: c.r, lag: c.lagDays, n: c.n };
-    }
-  }
+  if (new Date().getDay() !== 0) return null; // 日曜=振り返りの日
+  const best = stepsWeightLink(weight, steps, 21); // 通常より多めのペア数を要求
   if (!best || Math.abs(best.r) < 0.3) return null;
   const direction = best.r < 0 ? '減りやすい' : '増えやすい';
   return {
     kind: 'correlation',
     priority: 45,
     chip: '発見',
-    message: `あなたのデータでは、よく歩いた日の${best.lag}日後に体重が${direction}傾向があります(r=${best.r.toFixed(2)})。`,
+    message: `あなたのデータでは、よく歩いた日の${best.lagDays}日後に体重が${direction}傾向があります(r=${best.r.toFixed(2)})。`,
     detail: '相関は因果ではありませんが、生活のリズムを知るヒントになります。',
   };
 }
 
-/** Fallback status line — always available. */
+/** フォールバックの現状報告 — 常に生成できる。 */
 function status(series: BriefSeries, seed: number): BriefFinding {
   const insight = weightInsight(series.weight);
   if (insight.trendWeight != null && insight.slopePerWeek != null) {
@@ -346,7 +338,7 @@ function status(series: BriefSeries, seed: number): BriefFinding {
   };
 }
 
-// --- assembly ---------------------------------------------------------------
+// --- 組み立て ----------------------------------------------------------------
 
 const MAX_ITEMS = 3;
 
@@ -371,8 +363,8 @@ export function buildDailyBrief(
     .filter((f): f is BriefFinding => f !== null)
     .sort((a, b) => b.priority - a.priority);
 
-  // yesterday's headline kind never headlines again today — it drops to the
-  // items list and the status line takes over if nothing else is notable
+  // 昨日ヘッドラインだった種類は今日はヘッドラインにしない(itemsには残る)。
+  // 他に目立つ所見がなければ現状報告(status)が引き継ぐ。
   const headline = ranked.find((f) => !recent.has(f.kind)) ?? status(series, seed);
   const items = ranked.filter((f) => f !== headline).slice(0, MAX_ITEMS);
   return { headline, items };

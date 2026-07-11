@@ -4,7 +4,7 @@ import { Tabs } from 'expo-router';
 import { SettingsLink } from '@/components/settings-link';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Web fallback: JS tabs with headers (native platforms use NativeTabs). */
+/** Web用フォールバック: ヘッダー付きJSタブ(ネイティブはNativeTabsを使用)。 */
 export default function AppTabs() {
   const theme = useTheme();
   return (

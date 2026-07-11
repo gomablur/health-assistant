@@ -5,7 +5,7 @@ import { getHealthSource } from './index';
 import type { DailyPoint, MetricType } from './types';
 
 interface State {
-  /** query key the data belongs to — loading is derived from key mismatch */
+  /** データがどのクエリキーのものか — loading はキー不一致から導出する */
   key: string | null;
   data: DailyPoint[] | null;
   error: string | null;
@@ -13,15 +13,15 @@ interface State {
 
 const cache = new Map<string, DailyPoint[]>();
 
-/** Clear the in-memory query cache (after permission changes / manual refresh). */
+/** メモリ上のクエリキャッシュを破棄する(権限変更後・手動リフレッシュ時)。 */
 export function invalidateHealthCache() {
   cache.clear();
 }
 
 /**
- * Daily series for the past `days` days (today inclusive). While a new query
- * is in flight the previous data stays available, so period switches don't
- * flash empty charts.
+ * 直近 `days` 日(今日を含む)の日次系列を返すフック。
+ * 新しいクエリの実行中も前のデータを返し続けるので、期間切り替えで
+ * チャートが一瞬空になるちらつきが起きない。
  */
 export function useHealthDaily(metric: MetricType, days: number) {
   const [state, setState] = useState<State>({ key: null, data: null, error: null });

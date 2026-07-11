@@ -4,7 +4,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Chart-surface card: hairline ring, one plane above the page background. */
+/** カード: ヘアライン枠付きで、ページ背景より1段上のサーフェス。 */
 export function Card({ style, children, ...rest }: ViewProps) {
   const theme = useTheme();
   return (

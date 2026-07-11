@@ -15,6 +15,13 @@ import { useHealthDaily } from '@/health/useHealthDaily';
 import { useTheme } from '@/hooks/use-theme';
 import { formatValue } from '@/utils/format';
 
+/**
+ * 体重分析画面(このアプリの中核機能)。
+ * 体組成スイッチ(体重/体脂肪率/体脂肪量)+期間切替、トレンドチャート、
+ * ペース判定、実測ベースの摂取カロリー目安、計測継続率、歩数との相関。
+ * 体脂肪量はユーザーのお気に入り指標(体重×体脂肪率から導出)。
+ */
+
 const PERIODS = [
   { label: '1ヶ月', value: 30 },
   { label: '3ヶ月', value: 90 },

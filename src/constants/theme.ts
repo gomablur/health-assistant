@@ -1,6 +1,12 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * デザイントークン(色・フォント・余白)。色は dataviz スキルの検証済み
+ * リファレンスパレットに基づく(ライト/ダーク両対応でコントラスト検証済み)。
+ *
+ * 使い分け:
+ * - background / surface / backgroundElement — ページ > カード > 内部要素の3層
+ * - series* — メトリクスごとに固定のカテゴリカル色(体重=青、歩数=緑、…)。
+ *   同じメトリクスは画面をまたいでも必ず同じ色にする
+ * - deltaGood / deltaBad — 変化の良し悪しの色。方向(上下)ではなく意味で使う
  */
 
 import '@/global.css';
@@ -14,7 +20,7 @@ export const Colors = {
     backgroundElement: '#f0efec',
     backgroundSelected: '#e1e0d9',
     textSecondary: '#52514e',
-    // dataviz chrome (reference palette, light surface #fcfcfb)
+    // チャートの土台色(リファレンスパレット、ライトのサーフェス #fcfcfb)
     surface: '#fcfcfb',
     textMuted: '#898781',
     grid: '#e1e0d9',
@@ -23,7 +29,7 @@ export const Colors = {
     tint: '#2a78d6',
     deltaGood: '#006300',
     deltaBad: '#d03b3b',
-    // metric series (categorical slots, fixed per entity)
+    // メトリクス系列色(カテゴリカルスロット、メトリクスごとに固定)
     seriesWeight: '#2a78d6',
     seriesWeightSoft: '#9ec5f4',
     seriesSteps: '#1baf7a',
@@ -37,7 +43,7 @@ export const Colors = {
     backgroundElement: '#212120',
     backgroundSelected: '#383835',
     textSecondary: '#c3c2b7',
-    // dataviz chrome (reference palette, dark surface #1a1a19)
+    // チャートの土台色(リファレンスパレット、ダークのサーフェス #1a1a19)
     surface: '#1a1a19',
     textMuted: '#898781',
     grid: '#2c2c2a',
@@ -59,13 +65,13 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
+    /** iOSの標準システムフォント */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
+    /** iOSのセリフ体システムフォント */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
+    /** iOSの丸ゴシック系システムフォント */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
+    /** iOSの等幅システムフォント */
     mono: 'ui-monospace',
   },
   default: {

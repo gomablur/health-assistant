@@ -5,8 +5,8 @@ import { assessPace, PACE_LABEL, stepsWeightLink, weekOverWeek, weightInsight } 
 export type MetricSeries = Partial<Record<MetricType, DailyPoint[]>>;
 
 /**
- * Aggregate the numbers the AI coach needs. Only statistics leave the device —
- * never the raw day-by-day samples.
+ * AIコーチに渡す数値の集約。端末の外に出るのは統計値のみ —
+ * 日々の生データは絶対に送らない(プライバシー方針の要)。
  */
 export interface CoachSummary {
   date: string;

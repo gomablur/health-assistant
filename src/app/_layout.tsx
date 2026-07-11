@@ -3,14 +3,16 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { SettingsLink } from '@/components/settings-link';
 import { Colors } from '@/constants/theme';
-import { hydrateSettings } from '@/store/settings';
+import { hydrateSettings, useSettings } from '@/store/settings';
 
+// 設定の読み込みが終わるまでネイティブスプラッシュを保持する。最初に見える
+// フレームが正しい画面(タブ or オンボーディングへのリダイレクト)になる。
 SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({ fade: true, duration: 200 });
 
-/** native tabs have no headers of their own — the root stack provides one */
+/** ネイティブタブは自前ヘッダーを持たないため、ルートStackがヘッダーを提供する */
 const TAB_TITLES: Record<string, string> = {
   '/': 'ホーム',
   '/weight': '体重',
@@ -23,10 +25,15 @@ export default function RootLayout() {
   const dark = colorScheme === 'dark';
   const theme = Colors[dark ? 'dark' : 'light'];
   const pathname = usePathname();
+  const hydrated = useSettings((s) => s.hydrated);
 
   useEffect(() => {
     hydrateSettings();
   }, []);
+
+  useEffect(() => {
+    if (hydrated) SplashScreen.hideAsync();
+  }, [hydrated]);
 
   const navTheme = {
     ...(dark ? DarkTheme : DefaultTheme),
@@ -42,12 +49,11 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={navTheme}>
-      <AnimatedSplashOverlay />
       <Stack>
         <Stack.Screen
           name="(tabs)"
           options={{
-            // web tabs (JS) bring their own headers; native tabs rely on this one
+            // Webタブ(JS実装)は自前ヘッダー持ち。ネイティブタブはこのヘッダーに依存する
             headerShown: Platform.OS !== 'web',
             title: TAB_TITLES[pathname] ?? '',
             headerRight: () => <SettingsLink />,

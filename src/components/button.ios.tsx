@@ -10,9 +10,8 @@ interface Props {
 }
 
 /**
- * Native SwiftUI button — Liquid Glass on iOS 26 (falls back to the system
- * default style on older iOS). Android and web use the custom implementation
- * in button.tsx.
+ * ネイティブSwiftUIボタン — iOS 26ではLiquid Glass(旧iOSではシステム標準
+ * スタイルにフォールバック)。Android / Web は button.tsx の自前実装を使う。
  */
 export function Button({ title, onPress, variant = 'primary', disabled, loading }: Props) {
   return (

@@ -4,12 +4,12 @@ import type { HealthDataSource } from './types';
 export * from './types';
 
 /**
- * Source selection:
- * - EXPO_PUBLIC_MOCK_HEALTH=1 forces mock (container / web development).
- * - Otherwise the platform-resolved './sources/native' module provides the
- *   OS-backed source (native.ios.ts → HealthKit, native.android.ts → Health
- *   Connect, native.web.ts → none). When the native module is not linked
- *   (Expo Go) creating it throws and we fall back to mock so the app stays usable.
+ * データソースの選択:
+ * - EXPO_PUBLIC_MOCK_HEALTH=1 なら強制的にモック(コンテナ内・Web開発用)。
+ * - それ以外はプラットフォーム解決される './sources/native' がOS実装を返す
+ *   (native.ios.ts → HealthKit、native.android.ts → Health Connect、
+ *   native.web.ts → なし)。ネイティブモジュール未リンク環境(Expo Go)では
+ *   生成時に例外になるため、モックへフォールバックしてアプリは動き続ける。
  */
 let source: HealthDataSource | null = null;
 
@@ -18,7 +18,7 @@ export function getHealthSource(): HealthDataSource {
 
   if (process.env.EXPO_PUBLIC_MOCK_HEALTH !== '1') {
     try {
-      // Metro picks the platform-specific file, so web never bundles native SDKs.
+      // Metroがプラットフォーム別ファイルを選ぶので、WebバンドルにネイティブSDKは入らない
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const native = require('./sources/native').createNativeSource as
         | (() => HealthDataSource | null)

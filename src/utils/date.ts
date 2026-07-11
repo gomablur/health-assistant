@@ -1,4 +1,4 @@
-/** Date helpers. All series use local-time calendar days keyed as 'YYYY-MM-DD'. */
+/** 日付ヘルパー。全系列はローカル時刻の暦日を 'YYYY-MM-DD' キーで扱う。 */
 
 export function toISODate(d: Date): string {
   const y = d.getFullYear();
@@ -22,22 +22,22 @@ export function addDays(iso: string, days: number): string {
   return toISODate(d);
 }
 
-/** Days since Unix epoch, timezone-safe for local calendar days. */
+/** Unixエポックからの日数。ローカル暦日に対してタイムゾーン安全。 */
 export function dayIndex(iso: string): number {
   const d = fromISODate(iso);
   return Math.round(d.getTime() / 86400000);
 }
 
-/** 'M/D' for axis labels. */
+/** 軸ラベル用の 'M/D' 表記。 */
 export function formatMonthDay(iso: string): string {
   const d = fromISODate(iso);
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-/** ISO week key like '2026-W28' (for weekly review caching). */
+/** '2026-W28' 形式のISO週キー(週次振り返りのキャッシュキー用)。 */
 export function isoWeekKey(iso: string): string {
   const d = fromISODate(iso);
-  // shift to Thursday of the same ISO week
+  // 同じISO週の木曜日にシフトする(ISO週番号の定義に従う)
   const day = (d.getDay() + 6) % 7;
   d.setDate(d.getDate() - day + 3);
   const week1 = new Date(d.getFullYear(), 0, 4);

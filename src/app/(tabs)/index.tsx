@@ -18,6 +18,14 @@ import { useTheme } from '@/hooks/use-theme';
 import { addDays, todayISO } from '@/utils/date';
 import { formatValue } from '@/utils/format';
 
+/**
+ * ホーム画面(語りかけ型の入口)。構成は上から:
+ * 1. ヒーロー: トレンド体重の大きな数字+方向矢印+ペースピル
+ * 2. 今日のブリーフ: ヘッドライン1行+所見チップ(タップで展開)
+ * 3. 30日トレンドチャート、主要メトリクスのミニ統計
+ * 数字タイル羅列(ヘルスケアアプリ風)にしないのが意図的な設計判断。
+ */
+
 const KIND_ICON: Record<BriefKind, string> = {
   'weight-noise': '🌊',
   'weight-streak': '📈',
@@ -41,7 +49,7 @@ function greeting(): string {
   return 'こんばんは';
 }
 
-/** hero arrow + color by trend direction (losing reads as the good direction here) */
+/** トレンド方向に応じたヒーローの矢印と色(このアプリでは減少が「良い方向」)。 */
 function paceVisual(pace: Pace): { arrow: string; colorKey: 'deltaGood' | 'deltaBad' | 'textSecondary' } {
   switch (pace) {
     case 'losing':
@@ -56,7 +64,7 @@ function paceVisual(pace: Pace): { arrow: string; colorKey: 'deltaGood' | 'delta
   }
 }
 
-/** last point only if it is fresh enough (within maxAgeDays of today) */
+/** 最終計測が十分新しい(今日から maxAgeDays 以内)場合のみ値を返す。古ければ「未計測」扱い。 */
 function fresh(points: DailyPoint[] | null, maxAgeDays: number): number | null {
   if (!points || points.length === 0) return null;
   const last = points[points.length - 1];
@@ -110,7 +118,7 @@ export default function HomeScreen() {
   const today = new Date();
   const dateLabel = `${today.getMonth() + 1}月${today.getDate()}日 (${'日月火水木金土'[today.getDay()]})`;
 
-  // freshness: sleep is attributed to the wake-up day, so "last night" must be dated today
+  // 鮮度条件: 睡眠は起床日に帰属するので「昨夜の睡眠」は今日の日付でなければならない
   const sleepLastNight = fresh(sleep.data, 0);
   const heartRecent = fresh(heart.data, 1);
   const stepsToday = fresh(steps.data, 0);
@@ -125,7 +133,7 @@ export default function HomeScreen() {
         </ThemedText>
       </View>
 
-      {/* hero: today's one number, direction at a glance */}
+      {/* ヒーロー: 今日の1つの数字と、ひと目でわかる方向 */}
       <View style={styles.hero}>
         <ThemedText type="small" themeColor="textMuted">
           トレンド体重
@@ -158,7 +166,7 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* findings as chips; tap to expand one */}
+      {/* 所見はチップで並べ、タップした1つだけ展開する */}
       {brief && brief.items.length > 0 && (
         <View style={styles.chipsWrap}>
           {brief.items.map((item) => {

@@ -4,10 +4,11 @@ import { useColorScheme as useRNColorScheme } from 'react-native';
 const emptySubscribe = () => () => {};
 
 /**
- * To support static rendering, this value needs to be re-calculated on the client side for web
+ * Webの静的レンダリング対応: サーバー側ではカラースキームが分からないため、
+ * ハイドレーション完了までは 'light' を返し、完了後にクライアントの値へ切り替える。
  */
 export function useColorScheme() {
-  // false during server/static render, true after hydration on the client
+  // サーバー/静的レンダリング中は false、クライアントでのハイドレーション後に true
   const hasHydrated = useSyncExternalStore(
     emptySubscribe,
     () => true,

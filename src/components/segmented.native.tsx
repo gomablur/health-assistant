@@ -11,7 +11,7 @@ interface Props<T> {
   onChange: (value: T) => void;
 }
 
-/** OS-native segmented control (UISegmentedControl / Material 3 segmented buttons). */
+/** OSネイティブのセグメントコントロール(UISegmentedControl / Material 3 segmented buttons)。 */
 export function Segmented<T extends string | number>({ options, value, onChange }: Props<T>) {
   const index = options.findIndex((o) => o.value === value);
   return (

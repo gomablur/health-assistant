@@ -1,6 +1,6 @@
 import type { HealthDataSource } from '../types';
 
-/** Web has no OS health store; the caller falls back to mock. */
+/** WebにはOSのヘルスデータストアがない。呼び出し側がモックへフォールバックする。 */
 export function createNativeSource(): HealthDataSource | null {
   return null;
 }

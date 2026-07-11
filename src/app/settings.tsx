@@ -12,6 +12,13 @@ import { invalidateHealthCache } from '@/health/useHealthDaily';
 import { useTheme } from '@/hooks/use-theme';
 import { useSettings } from '@/store/settings';
 
+/**
+ * 設定画面(モーダル)。データソース表示・権限再リクエスト・Gemini APIキー管理。
+ * この画面は意図的に自前UI(OSネイティブ統一はしない方針の例外側)。
+ * 既知の問題: iOSの権限再リクエストは HealthKit の仕様でダイアログが再表示
+ * されない(TODO.md参照)。
+ */
+
 const SOURCE_LABEL: Record<string, string> = {
   mock: 'モックデータ(開発用)',
   healthkit: 'Apple ヘルスケア (HealthKit)',

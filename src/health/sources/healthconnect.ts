@@ -13,7 +13,7 @@ import { addDays, fromISODate, toISODate } from '@/utils/date';
 import type { DailyPoint, HealthDataSource, MetricType } from '../types';
 import { unionHours, type TimeInterval } from './intervals';
 
-/** Android implementation backed by Health Connect. Only imported via native.android.ts. */
+/** Android実装(Health Connect)。native.android.ts 経由でのみimportされる。 */
 
 const RECORD_TYPES: Record<MetricType, RecordType> = {
   weight: 'Weight',
@@ -33,9 +33,9 @@ function ensureInitialized(): Promise<boolean> {
 }
 
 /**
- * On Android 13 and below Health Connect is a separate Play Store app, not
- * part of the OS. Requesting permissions while it is missing crashes with an
- * unresolvable intent, so availability must be checked first.
+ * Android 13以前では Health Connect はOS同梱ではなくPlayストアの別アプリ。
+ * 未インストールのまま権限リクエストすると解決不能なintentでクラッシュするため、
+ * 先に利用可否を確認する必要がある。
  */
 async function sdkStatus(): Promise<number> {
   try {
@@ -65,6 +65,31 @@ function toSortedPoints(byDay: Map<string, number>): DailyPoint[] {
   return [...byDay.entries()]
     .map(([date, value]) => ({ date, value }))
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * レコード列をローカル日付ごとに1値へ畳み込む。
+ * - 'last': その日の最後のレコードを採用(体重など、日に数回計測しうる体組成系)
+ * - 'sum':  多数レコードに分割された加算量(歩数・消費カロリー)
+ * - 'mean': レート系の読み値。その日の平均を採用(bpm、kcal/日)
+ */
+function aggregateByDay<T>(
+  records: T[],
+  dayOf: (r: T) => string,
+  valueOf: (r: T) => number,
+  mode: 'last' | 'sum' | 'mean',
+): DailyPoint[] {
+  const acc = new Map<string, { total: number; n: number }>();
+  for (const r of records) {
+    const day = dayOf(r);
+    const v = valueOf(r);
+    const cur = acc.get(day);
+    if (mode === 'last' || !cur) acc.set(day, { total: v, n: 1 });
+    else acc.set(day, { total: cur.total + v, n: cur.n + 1 });
+  }
+  const byDay = new Map<string, number>();
+  for (const [day, { total, n }] of acc) byDay.set(day, mode === 'mean' ? total / n : total);
+  return toSortedPoints(byDay);
 }
 
 export const healthConnectSource: HealthDataSource = {
@@ -100,76 +125,54 @@ export const healthConnectSource: HealthDataSource = {
   },
   async queryDaily(metric, startISO, endISO) {
     if (!(await ensureInitialized())) return [];
+    const day = (time: string) => toISODate(new Date(time));
     switch (metric) {
       case 'weight': {
         const records = await readAll('Weight', startISO, endISO);
-        const byDay = new Map<string, number>();
-        for (const r of records) byDay.set(toISODate(new Date(r.time)), r.weight.inKilograms);
-        return toSortedPoints(byDay);
-      }
-      case 'steps': {
-        const records = await readAll('Steps', startISO, endISO);
-        const byDay = new Map<string, number>();
-        for (const r of records) {
-          const day = toISODate(new Date(r.startTime));
-          byDay.set(day, (byDay.get(day) ?? 0) + r.count);
-        }
-        return toSortedPoints(byDay);
-      }
-      case 'activeEnergy': {
-        const records = await readAll('ActiveCaloriesBurned', startISO, endISO);
-        const byDay = new Map<string, number>();
-        for (const r of records) {
-          const day = toISODate(new Date(r.startTime));
-          byDay.set(day, (byDay.get(day) ?? 0) + r.energy.inKilocalories);
-        }
-        return toSortedPoints(byDay);
+        return aggregateByDay(records, (r) => day(r.time), (r) => r.weight.inKilograms, 'last');
       }
       case 'bodyFat': {
         const records = await readAll('BodyFat', startISO, endISO);
-        const byDay = new Map<string, number>();
-        for (const r of records) byDay.set(toISODate(new Date(r.time)), r.percentage);
-        return toSortedPoints(byDay);
+        return aggregateByDay(records, (r) => day(r.time), (r) => r.percentage, 'last');
+      }
+      case 'steps': {
+        const records = await readAll('Steps', startISO, endISO);
+        return aggregateByDay(records, (r) => day(r.startTime), (r) => r.count, 'sum');
+      }
+      case 'activeEnergy': {
+        const records = await readAll('ActiveCaloriesBurned', startISO, endISO);
+        return aggregateByDay(
+          records,
+          (r) => day(r.startTime),
+          (r) => r.energy.inKilocalories,
+          'sum',
+        );
       }
       case 'basalEnergy': {
-        // BMR readings are kcal/day rates; a day's basal burn ≈ that day's mean rate
+        // BMRの読み値は kcal/日 のレート。その日の基礎消費 ≈ その日の平均レートとみなす
         const records = await readAll('BasalMetabolicRate', startISO, endISO);
-        const sums = new Map<string, { total: number; n: number }>();
-        for (const r of records) {
-          const day = toISODate(new Date(r.time));
-          const cur = sums.get(day) ?? { total: 0, n: 0 };
-          sums.set(day, {
-            total: cur.total + r.basalMetabolicRate.inKilocaloriesPerDay,
-            n: cur.n + 1,
-          });
-        }
-        const byDay = new Map<string, number>();
-        for (const [day, { total, n }] of sums) byDay.set(day, total / n);
-        return toSortedPoints(byDay);
+        return aggregateByDay(
+          records,
+          (r) => day(r.time),
+          (r) => r.basalMetabolicRate.inKilocaloriesPerDay,
+          'mean',
+        );
       }
       case 'restingHeartRate': {
         const records = await readAll('RestingHeartRate', startISO, endISO);
-        const sums = new Map<string, { total: number; n: number }>();
-        for (const r of records) {
-          const day = toISODate(new Date(r.time));
-          const cur = sums.get(day) ?? { total: 0, n: 0 };
-          sums.set(day, { total: cur.total + r.beatsPerMinute, n: cur.n + 1 });
-        }
-        const byDay = new Map<string, number>();
-        for (const [day, { total, n }] of sums) byDay.set(day, total / n);
-        return toSortedPoints(byDay);
+        return aggregateByDay(records, (r) => day(r.time), (r) => r.beatsPerMinute, 'mean');
       }
       case 'sleep': {
-        // sessions starting the previous evening belong to the next wake-up day
+        // 前夜から始まるセッションは翌朝(起床日)に帰属させる
         const records = await readAll('SleepSession', addDays(startISO, -1), endISO);
         const byDay = new Map<string, TimeInterval[]>();
         for (const r of records) {
           const end = new Date(r.endTime);
-          const day = toISODate(end);
-          if (day < startISO || day > endISO) continue;
-          const list = byDay.get(day) ?? [];
+          const wakeDay = toISODate(end);
+          if (wakeDay < startISO || wakeDay > endISO) continue;
+          const list = byDay.get(wakeDay) ?? [];
           list.push({ start: new Date(r.startTime).getTime(), end: end.getTime() });
-          byDay.set(day, list);
+          byDay.set(wakeDay, list);
         }
         return [...byDay.entries()]
           .map(([date, intervals]) => ({ date, value: unionHours(intervals) }))

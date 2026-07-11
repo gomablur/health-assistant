@@ -13,7 +13,7 @@ import { addDays, fromISODate, toISODate } from '@/utils/date';
 import type { DailyPoint, HealthDataSource, MetricType } from '../types';
 import { unionHours, type TimeInterval } from './intervals';
 
-/** iOS implementation backed by HealthKit. Only ever imported via native.ios.ts. */
+/** iOS実装(HealthKit)。native.ios.ts 経由でのみimportされる。 */
 
 const QUANTITY_TYPES: Partial<Record<MetricType, QuantityTypeIdentifier>> = {
   weight: 'HKQuantityTypeIdentifierBodyMass',
@@ -37,7 +37,7 @@ function readTypeFor(metric: MetricType): ObjectTypeIdentifier {
   return metric === 'sleep' ? SLEEP_TYPE : QUANTITY_TYPES[metric]!;
 }
 
-/** [00:00 of startISO, 24:00 of endISO) in local time. */
+/** ローカル時刻で [startISOの00:00, endISOの24:00) の範囲。 */
 function dateWindow(startISO: string, endISO: string) {
   return { startDate: fromISODate(startISO), endDate: fromISODate(addDays(endISO, 1)) };
 }
@@ -66,7 +66,7 @@ async function queryDailyStatistics(
   return points.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** Body-composition style metric: the last measurement of each local day wins. */
+/** 体組成系メトリクス: 各ローカル日の最後の計測値を採用する。 */
 async function queryDailyLastSample(
   identifier: QuantityTypeIdentifier,
   unit: string,
@@ -89,14 +89,14 @@ async function queryDailyLastSample(
 }
 
 async function queryDailySleep(startISO: string, endISO: string): Promise<DailyPoint[]> {
-  // start a day early so a night beginning before midnight is fully captured
+  // 深夜0時前に始まる夜を取りこぼさないよう、1日前から取得する
   const { startDate, endDate } = dateWindow(addDays(startISO, -1), endISO);
   const samples = await queryCategorySamples(SLEEP_TYPE, {
     filter: { date: { startDate, endDate } },
     ascending: true,
     limit: 0,
   });
-  // union per wake-up day to avoid double counting Watch + iPhone records
+  // 起床日ごとに区間の和集合を取り、Watch + iPhone の二重計上を防ぐ
   const byDay = new Map<string, TimeInterval[]>();
   for (const s of samples) {
     if (!ASLEEP_VALUES.has(s.value as number)) continue;
@@ -123,7 +123,7 @@ export const healthKitSource: HealthDataSource = {
       case 'weight':
         return queryDailyLastSample(QUANTITY_TYPES.weight!, 'kg', startISO, endISO);
       case 'bodyFat':
-        // HealthKit stores body fat as a 0–1 fraction in '%' unit
+        // HealthKitの体脂肪率は '%' 単位指定でも 0〜1 の割合で返る → ×100 が必要
         return queryDailyLastSample(QUANTITY_TYPES.bodyFat!, '%', startISO, endISO, 100);
       case 'sleep':
         return queryDailySleep(startISO, endISO);

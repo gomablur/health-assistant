@@ -10,6 +10,12 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { ALL_METRICS, getHealthSource, isMockSource } from '@/health';
 import { useSettings } from '@/store/settings';
 
+/**
+ * 初回オンボーディング画面。機能紹介ののち、ヘルスデータの読み取り権限を
+ * 要求してからホームへ。拒否されても「許可せずに続ける」導線を残す
+ * (権限はあとから設定画面で再リクエスト可能)。
+ */
+
 const FEATURES = [
   ['📈', '体重のトレンド分析', '毎朝の計測を移動平均でならし、本当の増減ペースを見える化します。'],
   ['⌚️', 'Apple Watch のデータ活用', '歩数・睡眠・心拍をまとめて振り返り、体重との関係を探ります。'],

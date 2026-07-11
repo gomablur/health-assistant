@@ -8,11 +8,11 @@ interface Props {
   points: DailyPoint[];
   width?: number;
   height?: number;
-  /** series color for the current-value end dot; the line stays de-emphasized */
+  /** 終端(現在値)ドットの系列色。線自体は控えめな色のまま */
   accent?: string;
 }
 
-/** Stat-tile sparkline: de-emphasis hue line, end dot in the series accent. */
+/** StatTile用スパークライン: 線は控えめ色、終端ドットだけ系列色で現在値を示す。 */
 export function Sparkline({ points, width = 96, height = 28, accent }: Props) {
   const theme = useTheme();
   if (points.length < 2) return <View style={{ width, height }} />;
@@ -38,7 +38,7 @@ export function Sparkline({ points, width = 96, height = 28, accent }: Props) {
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      {/* end dot with a surface ring so it reads over the line */}
+      {/* 終端ドット: 線と重なっても読めるようサーフェス色のリングを敷く */}
       <Circle cx={lastX} cy={lastY} r={4.5} fill={theme.surface} />
       <Circle cx={lastX} cy={lastY} r={3} fill={accent ?? theme.tint} />
     </Svg>

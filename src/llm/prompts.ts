@@ -1,5 +1,10 @@
 import type { CoachSummary } from '@/analytics/summary';
 
+/**
+ * AIコーチのプロンプト定義。LLMに渡すのは統計サマリー(CoachSummary)のみで、
+ * 日々の生データは含めない。トーンや安全方針はシステムプロンプトで固定する。
+ */
+
 export const COACH_SYSTEM_PROMPT = `あなたは健康管理アプリの伴走コーチです。ユーザーの健康データの統計サマリーをもとに、日本語で答えます。
 
 ルール:

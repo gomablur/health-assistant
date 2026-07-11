@@ -16,6 +16,13 @@ import { COACH_SYSTEM_PROMPT, questionContext, weeklyReviewPrompt } from '@/llm/
 import { useSettings } from '@/store/settings';
 import { isoWeekKey, todayISO } from '@/utils/date';
 
+/**
+ * AIコーチ画面(任意機能 — ローカル分析が主役で、これは追加のお楽しみ)。
+ * 週次振り返り(ISO週単位でキャッシュ)と自由質問。LLMに渡すのは
+ * CoachSummary(統計値)のみで、日々の生データは端末から出ない。
+ * 質問は無料枠保護のため1日の回数上限あり。
+ */
+
 const DAILY_QUESTION_LIMIT = 10;
 const K_QA_HISTORY = 'coach.qaHistory';
 
@@ -48,7 +55,7 @@ export default function CoachScreen() {
     return buildCoachSummary(series);
   }, [seriesReady, weight.data, steps.data, sleep.data, heart.data, energy.data]);
 
-  // --- weekly review, cached per ISO week ---
+  // --- 週次振り返り(ISO週単位でキャッシュ) ---
   const weekKey = isoWeekKey(todayISO());
   const reviewStorageKey = `coach.review.${weekKey}`;
   const [review, setReview] = useState<string | null>(null);
@@ -78,7 +85,7 @@ export default function CoachScreen() {
     }
   }, [apiKey, summary, reviewStorageKey]);
 
-  // --- Q&A ---
+  // --- 質問応答 ---
   const [question, setQuestion] = useState('');
   const [history, setHistory] = useState<QA[]>([]);
   const [asking, setAsking] = useState(false);

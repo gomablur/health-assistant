@@ -47,7 +47,6 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite",
       "expo-secure-store",
       [
         "@kingstinct/react-native-healthkit",

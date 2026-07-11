@@ -2,15 +2,14 @@ import type { DailyPoint } from '@/health/types';
 import { dayIndex } from '@/utils/date';
 
 /**
- * Statistics over daily series. All functions are pure and tolerate gaps
- * (missing days are absent from the array, never zero-filled).
+ * 日次系列に対する統計関数。すべて純粋関数で、欠測に耐える
+ * (未計測日は配列に存在しない。0埋めは絶対にしない)。
  */
 
 /**
- * Trailing moving average over a calendar window: for each point, the mean of
- * all points dated within the `windowDays` days ending at that point. Using a
- * calendar window (not "last N points") keeps the smoothing honest when
- * measurements are skipped.
+ * 暦日ウィンドウによる後方移動平均: 各点について、その点で終わる `windowDays`
+ * 日以内に日付が入る点の平均。「直近N点」ではなく暦日で区切ることで、
+ * 計測をサボった期間があってもならし方が歪まない。
  */
 export function movingAverage(points: DailyPoint[], windowDays: number): DailyPoint[] {
   const out: DailyPoint[] = [];
@@ -26,8 +25,8 @@ export function movingAverage(points: DailyPoint[], windowDays: number): DailyPo
 }
 
 /**
- * Exponentially weighted moving average with a half-life in days. Gap-aware:
- * the decay applied between two measurements grows with the days elapsed.
+ * 半減期(日)指定の指数加重移動平均。欠測対応:
+ * 2つの計測の間に空いた日数に応じて減衰を大きくする。
  */
 export function ewma(points: DailyPoint[], halfLifeDays: number): DailyPoint[] {
   if (points.length === 0) return [];
@@ -45,18 +44,18 @@ export function ewma(points: DailyPoint[], halfLifeDays: number): DailyPoint[] {
 }
 
 export interface Trend {
-  /** regression slope in value units per day */
+  /** 回帰直線の傾き(値の単位/日) */
   slopePerDay: number;
   slopePerWeek: number;
-  /** coefficient of determination, 0..1 */
+  /** 決定係数 0..1 */
   r2: number;
-  /** number of points used */
+  /** 使用した点の数 */
   n: number;
-  /** fitted value at the last point's date */
+  /** 最終点の日付におけるフィット値 */
   fittedEnd: number;
 }
 
-/** Ordinary least squares over (dayIndex, value). Returns null when under 3 points. */
+/** (dayIndex, value) に対する最小二乗法。3点未満なら null。 */
 export function linearTrend(points: DailyPoint[]): Trend | null {
   const n = points.length;
   if (n < 3) return null;
@@ -96,7 +95,7 @@ export function linearTrend(points: DailyPoint[]): Trend | null {
   };
 }
 
-/** Pearson correlation coefficient. Returns null when under 3 pairs or zero variance. */
+/** ピアソン相関係数。3ペア未満、または分散ゼロなら null。 */
 export function pearson(xs: number[], ys: number[]): number | null {
   const n = Math.min(xs.length, ys.length);
   if (n < 3) return null;
@@ -129,8 +128,8 @@ export interface DailyCorrelation {
 }
 
 /**
- * Correlate two daily series by date: pairs a[d + lagDays] with b[d]
- * (positive lag asks "does b predict a `lagDays` later?").
+ * 2つの日次系列を日付で対応づけて相関を取る: a[d + lagDays] と b[d] をペアにする
+ * (正のラグは「bは `lagDays` 日後のaを予測するか?」を問う)。
  */
 export function correlateDaily(
   a: DailyPoint[],
@@ -156,7 +155,7 @@ export function mean(values: number[]): number | null {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-/** Points dated within the last `days` days ending at `endISO` (inclusive). */
+/** `endISO` で終わる直近 `days` 日(両端含む)に日付が入る点を返す。 */
 export function lastDays(points: DailyPoint[], days: number, endISO: string): DailyPoint[] {
   const end = dayIndex(endISO);
   return points.filter((p) => {

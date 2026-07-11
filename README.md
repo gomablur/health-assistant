@@ -18,8 +18,9 @@ OS標準のヘルスアプリ(iOS: ヘルスケア / Android: ヘルスコネク
 src/
   health/      HealthDataSource 抽象化(healthkit / healthconnect / mock)
   analytics/   移動平均・EWMA・線形回帰・相関などの純粋関数(ユニットテスト対象)
+  coach/       デイリーブリーフのルールエンジン(このアプリの核)
   llm/         Gemini REST クライアントとプロンプト
-  components/  Card / StatTile / チャート(dataviz 参照パレット準拠)
+  components/  Card / StatTile / チャート(検証済みパレット準拠)
   app/         expo-router 画面
 ```
 
@@ -31,14 +32,16 @@ src/
 
 ```bash
 npm install
-npm test              # analytics のユニットテスト
+npm test              # ユニットテスト(analytics / briefing)
 npm run typecheck
-npx expo start --web  # モックデータでUI確認
+npm run web           # モックデータでUI確認
 ```
+
+開発の詳しい約束事は [AGENTS.md](AGENTS.md) を参照。
 
 ## 実機で使う
 
-[docs/BUILD.md](docs/BUILD.md) を参照(Mac + Xcode で `npx expo run:ios --device`)。
+[docs/BUILD.md](docs/BUILD.md) を参照(Mac + Xcode で `npm run device:ios`)。
 
 ## 免責
 

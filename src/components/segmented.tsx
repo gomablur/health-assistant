@@ -15,7 +15,7 @@ interface Props<T> {
   onChange: (value: T) => void;
 }
 
-/** Filter row above charts: a compact segmented control. */
+/** チャート上部のフィルタ行に使うコンパクトなセグメントコントロール(Web/Android用の自前実装)。 */
 export function Segmented<T extends string | number>({ options, value, onChange }: Props<T>) {
   const theme = useTheme();
   return (

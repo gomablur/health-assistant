@@ -1,20 +1,20 @@
 import type { DailyPoint } from '@/health/types';
-import { todayISO } from '@/utils/date';
+import { addDays, todayISO } from '@/utils/date';
 import { correlateDaily, ewma, lastDays, linearTrend, mean, movingAverage } from './stats';
 
-/** Derived numbers the weight screen and the coach both need. */
+/** 体重画面とコーチの両方が使う、体重系列からの導出値。 */
 export interface WeightInsight {
   latest: DailyPoint | null;
-  /** smoothed "true" weight (EWMA, half-life 7 days) at the latest measurement */
+  /** ならした「本当の」体重(EWMA、半減期7日)の最新値 */
   trendWeight: number | null;
-  /** kg per week over the last 28 days of measurements */
+  /** 直近28日の計測に対する週あたり変化量(kg/週) */
   slopePerWeek: number | null;
-  /** how well the 28-day linear fit explains the data, 0..1 */
+  /** 28日線形フィットの説明力(決定係数)0..1 */
   trendR2: number | null;
-  /** average of the last 7 / previous 7 calendar days */
+  /** 直近7日 / その前7日の平均 */
   avg7: number | null;
   prevAvg7: number | null;
-  /** measurement adherence over the last 28 days, 0..1 */
+  /** 直近28日の計測継続率 0..1 */
   adherence28: number;
 }
 
@@ -24,24 +24,19 @@ export function weightInsight(weight: DailyPoint[], endISO = todayISO()): Weight
   const trendWeight = smoothed.length > 0 ? smoothed[smoothed.length - 1].value : null;
   const last28 = lastDays(weight, 28, endISO);
   const trend = linearTrend(last28);
-  const avg7 = mean(lastDays(weight, 7, endISO).map((p) => p.value));
-  const prevAvg7 = mean(
-    lastDays(weight, 14, endISO)
-      .filter((p) => !lastDays(weight, 7, endISO).includes(p))
-      .map((p) => p.value),
-  );
+  const wow = weekOverWeek(weight, endISO);
   return {
     latest,
     trendWeight,
     slopePerWeek: trend?.slopePerWeek ?? null,
     trendR2: trend?.r2 ?? null,
-    avg7,
-    prevAvg7,
+    avg7: wow.avg7,
+    prevAvg7: wow.prevAvg7,
     adherence28: last28.length / 28,
   };
 }
 
-/** Pace assessment against the commonly recommended safe bound (±0.5 kg/week). */
+/** 変化ペースの判定。一般に推奨される安全域(週±0.5kg)を境界に使う。 */
 export type Pace = 'losing-fast' | 'losing' | 'stable' | 'gaining' | 'gaining-fast';
 
 export function assessPace(slopePerWeek: number): Pace {
@@ -65,27 +60,30 @@ export interface MetricWeekSummary {
   prevAvg7: number | null;
 }
 
+/** 直近7日平均と、その前の7日平均(前週比の表示用)。 */
 export function weekOverWeek(points: DailyPoint[], endISO = todayISO()): MetricWeekSummary {
-  const last7 = lastDays(points, 7, endISO);
-  const last14 = lastDays(points, 14, endISO);
-  const prev7 = last14.filter((p) => !last7.includes(p));
-  return { avg7: mean(last7.map((p) => p.value)), prevAvg7: mean(prev7.map((p) => p.value)) };
+  return {
+    avg7: mean(lastDays(points, 7, endISO).map((p) => p.value)),
+    prevAvg7: mean(lastDays(points, 7, addDays(endISO, -7)).map((p) => p.value)),
+  };
 }
 
 export interface ActivityWeightLink {
-  /** best (largest |r|) correlation between daily steps and weight change, lag 0..7 days */
+  /** 歩数と体重変化のうち |r| 最大の相関(ラグ0〜7日を走査) */
   r: number;
   lagDays: number;
   n: number;
 }
 
 /**
- * Correlate steps with day-over-day weight *change* rather than absolute
- * weight — absolute weight trends dominate and produce spurious correlations.
+ * 歩数と相関させるのは体重の絶対値ではなく「前回計測からの変化量」。
+ * 絶対値はトレンド自体に引きずられて見かけの相関が出てしまうため。
+ * `minPairs` 未満のペア数しか揃わないラグは採用しない。
  */
 export function stepsWeightLink(
   weight: DailyPoint[],
   steps: DailyPoint[],
+  minPairs = 14,
 ): ActivityWeightLink | null {
   const deltas: DailyPoint[] = [];
   for (let i = 1; i < weight.length; i++) {
@@ -94,12 +92,12 @@ export function stepsWeightLink(
   let best: ActivityWeightLink | null = null;
   for (let lag = 0; lag <= 7; lag++) {
     const c = correlateDaily(deltas, steps, lag);
-    if (c && c.n >= 14 && (!best || Math.abs(c.r) > Math.abs(best.r))) {
+    if (c && c.n >= minPairs && (!best || Math.abs(c.r) > Math.abs(best.r))) {
       best = { r: c.r, lagDays: lag, n: c.n };
     }
   }
   return best;
 }
 
-/** 7-day moving average, exported for chart overlays. */
+/** チャートのオーバーレイ用の7日移動平均。 */
 export const smoothForChart = (points: DailyPoint[]) => movingAverage(points, 7);

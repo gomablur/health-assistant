@@ -1,10 +1,10 @@
 /**
- * Merge possibly-overlapping time intervals and return the union length in
- * hours. Sleep samples often come from multiple writers (Watch + iPhone), so
- * naive summing would double-count.
+ * 重なりうる時間区間をマージして、合計時間(時間単位)を返す。
+ * 睡眠サンプルは複数の書き込み元(Watch + iPhone)から来ることが多く、
+ * 素朴に合計すると二重計上になるため区間の和集合を取る。
  */
 export interface TimeInterval {
-  start: number; // epoch ms
+  start: number; // エポックms
   end: number;
 }
 

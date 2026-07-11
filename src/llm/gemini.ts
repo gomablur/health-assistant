@@ -1,12 +1,11 @@
 /**
- * Minimal Gemini API client (REST, no SDK). The user supplies their own free
- * Google AI Studio key via the settings screen; requests go directly from the
- * device, no server involved.
+ * 最小のGemini APIクライアント(REST直叩き、SDKなし)。APIキーはユーザー自身が
+ * Google AI Studioで発行して設定画面から登録する。リクエストは端末から直接
+ * 送信され、サーバーは介在しない。
  *
- * Models are tried in order and a 404 (model retired — Google has been
- * shutting models down ahead of announced dates) falls through to the next
- * candidate, so a model retirement degrades gracefully instead of breaking
- * the app until an update.
+ * モデルは候補リストを順に試し、404(モデル退役 — Googleは告知より早く
+ * モデルを止めることがある)なら次の候補へフォールバックする。これにより
+ * モデル退役時もアプリ更新まで壊れず、劣化にとどまる。
  */
 
 export const GEMINI_MODEL_CANDIDATES = [

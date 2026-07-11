@@ -1,4 +1,4 @@
-/** Number formatting for metric values. */
+/** メトリクス値の表示用フォーマット。 */
 export function formatValue(value: number | null | undefined, digits: number): string | null {
   if (value == null) return null;
   if (digits > 0) return value.toFixed(digits);
