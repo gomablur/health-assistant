@@ -23,7 +23,7 @@
 | `src/coach/` | デイリーブリーフのルールエンジン(`briefing.ts` が本体)と組み立てフック |
 | `src/llm/` | Gemini RESTクライアント(モデル退役に備えた候補フォールバック)とプロンプト |
 | `src/app/` | expo-router 画面。`(tabs)/` がメイン4画面、settings はモーダル |
-| `src/components/` | 共有UI。`*.ios.tsx` / `*.native.tsx` / `*.web.tsx` でOS別実装 |
+| `src/components/` | 共有UI。`*.ios.tsx` / `*.android.tsx` / `*.native.tsx` / `*.web.tsx` でOS別実装 |
 | `src/constants/theme.ts` | デザイントークン(検証済みパレット)。色はここからだけ取る |
 | `plugins/` | ローカル config plugin(Health Connect の権限delegate注入など) |
 | `scripts/` | `gen-icons.mjs`(アイコン生成)、`android-metro-host.sh`(Android実機のMetro接続先設定) |

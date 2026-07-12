@@ -12,7 +12,10 @@ interface Props {
   loading?: boolean;
 }
 
-/** 自前実装のボタン(Android / Web用。iOSは button.ios.tsx のSwiftUI版が優先される)。 */
+/**
+ * 自前実装のボタン(Web用)。ネイティブは button.ios.tsx (SwiftUI) と
+ * button.android.tsx (Jetpack Compose) が優先される。
+ */
 export function Button({ title, onPress, variant = 'primary', disabled, loading }: Props) {
   const theme = useTheme();
   const primary = variant === 'primary';
