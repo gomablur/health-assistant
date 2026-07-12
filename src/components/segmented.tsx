@@ -16,12 +16,8 @@ interface Props<T> {
 }
 
 /**
- * チャート上部のフィルタ行に使うセグメントコントロール(全プラットフォーム共通の自前実装)。
- *
- * かつてOSネイティブ(UISegmentedControl / M3 SegmentedButton)を使っていたが、
- * ネイティブ版はテーマAPIが歯抜けで、Androidでは選択中の塗りしか色を指定できず、
- * ラベル色が壁紙由来のダイナミックカラー(緑)のまま残ってしまう。チャートの
- * フィルタはネイティブである価値がほぼないため、自前実装に一本化した。
+ * チャート上部のフィルタ行に使うセグメントコントロール(Web用の自前実装)。
+ * ネイティブは segmented.ios.tsx / segmented.android.tsx が優先される。
  */
 export function Segmented<T extends string | number>({ options, value, onChange }: Props<T>) {
   const theme = useTheme();

@@ -39,10 +39,12 @@
 - `ios/` `android/` はCNG管理(コミットしない)。config plugin を変えたら
   `npx expo prebuild -p android --no-install` で生成物を確認し、終わったら `rm -rf android`
 - LLMへ送るのは `CoachSummary`(統計値)のみ。日々の生データを端末外に出さない
-- UI方針: **OSにしか作れないものだけネイティブ**にする(タブバー=Liquid Glass/M3、
-  ボタン=波紋・触覚)。ネイティブ部品はテーマAPIが歯抜けで、色を一部しか指定できない
-  ものが多い(例: M3セグメントコントロールは選択中の塗りしか指定できず、ラベルが
-  壁紙由来のダイナミックカラーで残る)。**色が完全に制御できない部品は自前実装にする**
+- UI方針: **操作系はOSネイティブ**(タブバー・ボタン・セグメント。iOSのLiquid Glassや
+  M3の波紋は自前で再現できない)、**表示系は自前**。Webは自前実装にフォールバック
+- ネイティブ部品の色指定はラッパーごとにAPIが歯抜け。**便利ラッパーで色が足りなければ、
+  下位のプリミティブを直に組んで全状態の色を明示する**(自前実装に逃げない)。
+  例: `@expo/ui/community` の SegmentedControl は tintColor が選択中の塗りにしか
+  渡らずラベルが緑のまま残る → `@expo/ui/jetpack-compose` の SegmentedButton を直に使う
 - Androidのネイティブ部品は色を指定しないと壁紙由来のMaterial Youダイナミックカラーに
   なる。タブバーは tintColor(アイコン・ラベル)だけでなく backgroundColor / rippleColor /
   indicatorColor も要指定。Alertダイアログの色はJSからは触れない(OS標準のまま許容)
