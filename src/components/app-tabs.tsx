@@ -1,14 +1,18 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
+import { useTheme } from '@/hooks/use-theme';
+
 /**
  * OSネイティブのタブバー: iOS 26ではLiquid Glass、AndroidではMaterial 3。
  * WebはJS実装(app-tabs.web.tsx)を使う。
  * 注意: ネイティブタブは自前のヘッダーを持たないため、ヘッダーはルートの
  * Stack(src/app/_layout.tsx)が提供している。
+ * 選択中タブの色は指定しないとシステム標準の青になるため、ブランド色を渡す。
  */
 export default function AppTabs() {
+  const theme = useTheme();
   return (
-    <NativeTabs>
+    <NativeTabs tintColor={theme.tint} indicatorColor={theme.backgroundSelected}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>ホーム</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />

@@ -102,6 +102,7 @@ export default function SettingsScreen() {
           onChangeText={setKeyInput}
           placeholder={geminiApiKey ? '新しいキーで上書き' : 'AIza... を貼り付け'}
           placeholderTextColor={theme.textMuted}
+          selectionColor={theme.tint}
           autoCapitalize="none"
           autoCorrect={false}
           secureTextEntry
