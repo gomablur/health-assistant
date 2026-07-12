@@ -1,11 +1,14 @@
 /**
- * デザイントークン(色・フォント・余白)。色は dataviz スキルの検証済み
- * リファレンスパレットに基づく(ライト/ダーク両対応でコントラスト検証済み)。
+ * デザイントークン(色・フォント・余白)。ブランド(朝焼けコーラル、docs/BRAND.md)に
+ * 合わせつつ、dataviz スキルのバリデータでライト/ダーク両モードとも検証済み
+ * (明度バンド・CVD分離・サーフェスコントラスト)。
  *
  * 使い分け:
  * - background / surface / backgroundElement — ページ > カード > 内部要素の3層
- * - series* — メトリクスごとに固定のカテゴリカル色(体重=青、歩数=緑、…)。
+ * - series* — メトリクスごとに固定のカテゴリカル色(体重=ブランドコーラル、歩数=緑、…)。
  *   同じメトリクスは画面をまたいでも必ず同じ色にする
+ * - tint — 操作系のアクセント。ダークは体重色と同一、ライトのみ白文字4.5:1を
+ *   確保するため一段濃いコーラルにしている
  * - deltaGood / deltaBad — 変化の良し悪しの色。方向(上下)ではなく意味で使う
  */
 
@@ -26,16 +29,16 @@ export const Colors = {
     grid: '#e1e0d9',
     axis: '#c3c2b7',
     border: 'rgba(11,11,11,0.10)',
-    tint: '#2a78d6',
+    tint: '#c14e28',
     deltaGood: '#006300',
     deltaBad: '#d03b3b',
     // メトリクス系列色(カテゴリカルスロット、メトリクスごとに固定)
-    seriesWeight: '#2a78d6',
-    seriesWeightSoft: '#9ec5f4',
+    seriesWeight: '#e56638',
+    seriesWeightSoft: '#f2ac90',
     seriesSteps: '#1baf7a',
     seriesSleep: '#4a3aa7',
-    seriesHeart: '#e34948',
-    seriesEnergy: '#eb6834',
+    seriesHeart: '#d55181',
+    seriesEnergy: '#eda100',
   },
   dark: {
     text: '#ffffff',
@@ -49,15 +52,15 @@ export const Colors = {
     grid: '#2c2c2a',
     axis: '#383835',
     border: 'rgba(255,255,255,0.10)',
-    tint: '#3987e5',
+    tint: '#e56638',
     deltaGood: '#0ca30c',
     deltaBad: '#d03b3b',
-    seriesWeight: '#3987e5',
-    seriesWeightSoft: '#1c5cab',
+    seriesWeight: '#e56638',
+    seriesWeightSoft: '#a04425',
     seriesSteps: '#199e70',
     seriesSleep: '#9085e9',
-    seriesHeart: '#e66767',
-    seriesEnergy: '#d95926',
+    seriesHeart: '#d55181',
+    seriesEnergy: '#c98500',
   },
 } as const;
 
