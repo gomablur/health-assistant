@@ -41,10 +41,11 @@
 - LLMへ送るのは `CoachSummary`(統計値)のみ。日々の生データを端末外に出さない
 - UI方針: **操作系はOSネイティブ**(タブバー・ボタン・セグメント。iOSのLiquid Glassや
   M3の波紋は自前で再現できない)、**表示系は自前**。Webは自前実装にフォールバック
-- ネイティブ部品の色指定はラッパーごとにAPIが歯抜け。**便利ラッパーで色が足りなければ、
-  下位のプリミティブを直に組んで全状態の色を明示する**(自前実装に逃げない)。
-  例: `@expo/ui/community` の SegmentedControl は tintColor が選択中の塗りにしか
-  渡らずラベルが緑のまま残る → `@expo/ui/jetpack-compose` の SegmentedButton を直に使う
+- ネイティブ部品の色指定はラッパーごとにAPIが歯抜け(例: `@expo/ui/community` の
+  SegmentedControl は tintColor が選択中の塗りにしか渡らず、Androidのラベル色は
+  ダイナミックカラーのまま)。**まずはラッパーで済ませ、実機で見て破綻していたら**
+  `@expo/ui/jetpack-compose` のプリミティブを直に組んで全状態の色を明示する。
+  コードの単純さを優先し、先回りで作り込まない
 - Androidのネイティブ部品は色を指定しないと壁紙由来のMaterial Youダイナミックカラーに
   なる。タブバーは tintColor(アイコン・ラベル)だけでなく backgroundColor / rippleColor /
   indicatorColor も要指定。Alertダイアログの色はJSからは触れない(OS標準のまま許容)
