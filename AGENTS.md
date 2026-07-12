@@ -10,6 +10,8 @@
   https://docs.expo.dev/versions/v57.0.0/
 - 実機ビルド手順は [docs/BUILD.md](docs/BUILD.md)(Mac側の作業。コンテナからは不可)
 - 未着手の課題は [TODO.md](TODO.md)
+- ブランド・販売方針(アプリ名「けさのからだ」、やらないことリスト、収益化)は
+  [docs/BRAND.md](docs/BRAND.md)。機能の取捨選択に迷ったらここに立ち返る
 
 ## 地図
 
