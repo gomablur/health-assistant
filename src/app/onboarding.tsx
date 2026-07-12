@@ -59,7 +59,7 @@ export default function OnboardingScreen() {
       <SafeAreaView style={styles.safe}>
         <View style={styles.hero}>
           <ThemedText type="title" style={styles.center}>
-            health{'\n'}assistant
+            けさのからだ
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
             計測するだけで終わらせない、健康データの伴走者

@@ -261,7 +261,7 @@ export default function HomeScreen() {
 
       {isMockSource() && (
         <ThemedText type="small" themeColor="textMuted" style={styles.mockNote}>
-          🧪 モックデータ表示中(実機ではヘルスケア / Health Connect のデータになります)
+          🧪 モックデータ表示中(実機ではヘルスケア / ヘルスコネクト のデータになります)
         </ThemedText>
       )}
     </Screen>
