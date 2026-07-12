@@ -1,6 +1,7 @@
 # health-assistant 開発ガイド(人間・LLM共通)
 
-毎朝の体重計測とApple Watchのデータを「語りかけ型」で分析する個人用ヘルスアプリ。
+毎朝の体重計測とApple Watchのデータを「語りかけ型」で分析する個人用ヘルスアプリ
+「けさのからだ」(リポジトリ名は開発コードネームの health-assistant のまま)。
 **ローカルのルールベース分析(src/coach/briefing.ts)が核**。LLM(Gemini)は任意の追加機能で、
 統計サマリーしか渡さない。
 

@@ -129,7 +129,7 @@ export default function SettingsScreen() {
       <Card>
         <CardTitle>このアプリについて</CardTitle>
         <ThemedText type="small" themeColor="textSecondary">
-          health-assistant は、毎日のヘルスデータを分析して健康的な生活に伴走する個人用アプリです。
+          「けさのからだ」は、毎日のヘルスデータを分析して健康的な生活に伴走する個人用アプリです。
           表示される内容は一般的な情報であり、医療アドバイスではありません。
         </ThemedText>
       </Card>

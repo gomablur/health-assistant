@@ -2,8 +2,8 @@
 // アプリアイコンの生成(依存パッケージなし: RGBAバッファに描画してzlibでPNGエンコード)。
 // デザインを変えたら `npm run icons` で assets/ を再生成する。
 //
-// 絵柄: 吹き出し(語りかけ型)+ 体重トレンドライン(切り抜き)+ 現在地ドット。
-// 色はアプリのブランド色(src/constants/theme.ts の tint 系)。
+// 絵柄: 朝焼けグラデーション+白い滑らかなトレンド曲線(EWMA)+朝日。
+// ブランド方針は docs/BRAND.md(マーケ面は朝焼けパレット、アプリ内データ色とは別系統)。
 import { deflateSync } from "node:zlib";
 import { writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -52,27 +52,30 @@ function encodePng(rgba, w, h) {
 
 // ---- 色 ----
 const hex = (s) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16), 255];
-const BRAND_TOP = hex("#3987e5"); // theme dark tint(明るめの体重ブルー)
-const BRAND_BOTTOM = hex("#1c5cab"); // theme seriesWeightSoft(dark)
+const BRAND_TOP = hex("#e2543f"); // 朝焼けの空(上: 深いコーラルローズ)
+const BRAND_BOTTOM = hex("#f7a44f"); // 地平線近くのアンバーの光(下)
 const WHITE = hex("#ffffff");
 const CLEAR = [0, 0, 0, 0];
 
 // ---- 絵柄の形状(論理座標 0-100) ----
-const BUBBLE = { x: 17, y: 20, w: 66, h: 48, r: 15 };
-const TAIL = [
-  [33, 66],
-  [50, 67],
-  [29, 86],
-];
-const LINE = [
-  [33, 44],
-  [45, 55],
-  [57, 47],
-  [67, 57],
-];
-const LINE_HW = 2.6; // 線の半幅
-const LINE_END_T = 0.42; // 最終セグメントを途中で止めてドットと隙間を作る
-const DOT = { x: 67, y: 57, r: 4.2 };
+// なだらかに下るトレンド曲線(smoothstepで両端が水平に落ち着く=EWMAが均した線)と、
+// その上の空に昇る朝日(光線つき)。
+const CURVE = { x0: 12, y0: 52, x1: 88, y1: 70, segments: 24 };
+const CURVE_HW = 3.2; // 線の半幅
+const SUN = { x: 67, y: 30, r: 8.5, rayIn: 11.5, rayOut: 15.5, rayHw: 1.7, rays: 8 };
+const curveY = (x) => {
+  const t = Math.max(0, Math.min(1, (x - CURVE.x0) / (CURVE.x1 - CURVE.x0)));
+  const s = t * t * (3 - 2 * t); // smoothstep
+  return CURVE.y0 + (CURVE.y1 - CURVE.y0) * s;
+};
+const curvePoints = () => {
+  const pts = [];
+  for (let i = 0; i <= CURVE.segments; i++) {
+    const x = CURVE.x0 + ((CURVE.x1 - CURVE.x0) * i) / CURVE.segments;
+    pts.push([x, curveY(x)]);
+  }
+  return pts;
+};
 
 // ---- 描画 (論理0-100座標、S倍スーパーサンプリングでアンチエイリアス) ----
 function drawIcon(size, { bg = "gradient", pad = 0, glyphColor = WHITE, glyph = true } = {}) {
@@ -90,7 +93,7 @@ function drawIcon(size, { bg = "gradient", pad = 0, glyphColor = WHITE, glyph = 
       // favicon用: 角丸スクエアの外は透明
       if (!inRoundRect(x, y, 0, 0, W, W, W * 0.22)) return CLEAR;
     }
-    const t = (x + y) / (2 * W); // 左上→右下の対角グラデーション
+    const t = y / W; // 上→下の垂直グラデーション(朝焼けの空)
     return [
       BRAND_TOP[0] + (BRAND_BOTTOM[0] - BRAND_TOP[0]) * t,
       BRAND_TOP[1] + (BRAND_BOTTOM[1] - BRAND_TOP[1]) * t,
@@ -112,13 +115,6 @@ function drawIcon(size, { bg = "gradient", pad = 0, glyphColor = WHITE, glyph = 
     const cy = Math.max(ry + rr, Math.min(y, ry + rh - rr));
     return (x - cx) ** 2 + (y - cy) ** 2 <= rr * rr;
   }
-  const inTriangle = (x, y, [a, b, c]) => {
-    const s = (p, q) => (q[0] - p[0]) * (y - p[1]) - (q[1] - p[1]) * (x - p[0]);
-    const d1 = s(a, b);
-    const d2 = s(b, c);
-    const d3 = s(c, a);
-    return !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
-  };
   const distToSegment = (x, y, ax, ay, bx, by) => {
     const dx = bx - ax;
     const dy = by - ay;
@@ -131,19 +127,6 @@ function drawIcon(size, { bg = "gradient", pad = 0, glyphColor = WHITE, glyph = 
     for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(W - 1, Math.ceil(y1)); y++)
       for (let x = Math.max(0, Math.floor(x0)); x <= Math.min(W - 1, Math.ceil(x1)); x++)
         if (test(x, y)) px(x, y, color === "bg" ? bgAt(x, y) : color);
-  };
-  const fillRoundRect = ({ x, y, w, h, r }, c) =>
-    paint(u(x), u(y), u(x + w), u(y + h), (px_, py_) => inRoundRect(px_, py_, u(x), u(y), r2p(w), r2p(h), r2p(r)), c);
-  const fillTriangle = (pts, c) => {
-    const p = pts.map(([x, y]) => [u(x), u(y)]);
-    paint(
-      Math.min(...p.map((q) => q[0])),
-      Math.min(...p.map((q) => q[1])),
-      Math.max(...p.map((q) => q[0])),
-      Math.max(...p.map((q) => q[1])),
-      (x, y) => inTriangle(x, y, p),
-      c,
-    );
   };
   const fillCapsule = ([ax, ay], [bx, by], hw, c) => {
     const [pax, pay, pbx, pby, phw] = [u(ax), u(ay), u(bx), u(by), r2p(hw)];
@@ -166,19 +149,21 @@ function drawIcon(size, { bg = "gradient", pad = 0, glyphColor = WHITE, glyph = 
     for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) px(x, y, bgAt(x, y));
 
   if (glyph) {
-    // 2. 吹き出し(本体+しっぽ)
-    fillRoundRect(BUBBLE, glyphColor);
-    fillTriangle(TAIL, glyphColor);
-    // 3. トレンドライン+ドットを背景色で切り抜く(透明背景なら透明=穴になる)
-    for (let i = 0; i < LINE.length - 1; i++) {
-      const [a, b] = [LINE[i], LINE[i + 1]];
-      const end =
-        i === LINE.length - 2
-          ? [a[0] + (b[0] - a[0]) * LINE_END_T, a[1] + (b[1] - a[1]) * LINE_END_T]
-          : b;
-      fillCapsule(a, end, LINE_HW, "bg");
+    // 2. トレンド曲線(短いカプセルを連ねて滑らかな一本線にする)
+    const pts = curvePoints();
+    for (let i = 0; i < pts.length - 1; i++) fillCapsule(pts[i], pts[i + 1], CURVE_HW, glyphColor);
+    // 3. 朝日(円盤+放射状の光線)
+    fillCircle(SUN, glyphColor);
+    for (let i = 0; i < SUN.rays; i++) {
+      const a = (i / SUN.rays) * Math.PI * 2;
+      const [dx, dy] = [Math.cos(a), Math.sin(a)];
+      fillCapsule(
+        [SUN.x + dx * SUN.rayIn, SUN.y + dy * SUN.rayIn],
+        [SUN.x + dx * SUN.rayOut, SUN.y + dy * SUN.rayOut],
+        SUN.rayHw,
+        glyphColor,
+      );
     }
-    fillCircle(DOT, "bg");
   }
 
   // ダウンサンプリング (S×S平均)

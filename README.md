@@ -1,7 +1,9 @@
-# health-assistant
+# けさのからだ(health-assistant)
 
 OS標準のヘルスアプリ(iOS: ヘルスケア / Android: ヘルスコネクト)からデータを読み取り、
 「計測するだけ」で終わっていた健康データを分析して伴走するReact Native (Expo) アプリ。
+アプリ名は「けさのからだ」(リポジトリ名は開発コードネームの health-assistant のまま)。
+ブランド・販売方針は [docs/BRAND.md](docs/BRAND.md)。
 
 ## 機能
 

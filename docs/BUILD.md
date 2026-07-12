@@ -44,10 +44,10 @@ npm start   # Metro を起動(--dev-client モード: QR や 'a' キーが Expo 
 ```
 
 > **Expo Go は使えません**。HealthKit / Health Connect のネイティブモジュールが
-> Expo Go には含まれていないためです。必ずホーム画面の health-assistant アイコン
+> Expo Go には含まれていないためです。必ずホーム画面の「けさのからだ」アイコン
 > (`device:ios` / `device:android` でインストールしたビルド)から起動してください。
 
-実機にインストール済みの health-assistant(dev client)を開くと、
+実機にインストール済みの「けさのからだ」(dev client)を開くと、
 同一 LAN 上の Metro に接続され、JS の変更は即時反映されます。
 Android も同じ流れです(初回に接続先の書き込みが済んでいれば USB 不要。後述)。
 
@@ -111,7 +111,7 @@ USB 接続でローカルに Release を焼くだけなら `npm run standalone:a
 | 症状 | 対処 |
 |---|---|
 | Android: スプラッシュで固まる | Metro に接続できていない(RN は応答が来ないと無言で待ち続ける)。Mac と実機が同じ Wi-Fi にいるか確認し、USB を挿して `npm run android:metro-host` で接続先を Mac の LAN IP に再設定 → `npm start` → アプリを起動し直す。疎通確認は実機ブラウザで `http://<MacのIP>:8081/status`(`packager-status:running` が出ればOK) |
-| ヘルスデータが全部空 | 設定アプリ > ヘルスケア > データアクセスとデバイス > health-assistant で読み取りが許可されているか確認 |
+| ヘルスデータが全部空 | 設定アプリ > ヘルスケア > データアクセスとデバイス > けさのからだ で読み取りが許可されているか確認 |
 | 「モックデータを表示中」と出る | dev client ではなく Expo Go で開いている。ホーム画面のアプリアイコンから起動する |
 | 7日経って起動しない | 無料署名の失効。`npm run device:ios`(または `npm run standalone:ios`)で再署名 |
 | 外で開くと起動しない / 白画面 | dev client は Metro 必須。外でも使うなら `npm run standalone:ios` で Release 版を入れる |

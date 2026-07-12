@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "health-assistant",
-    "slug": "health-assistant",
+    "name": "けさのからだ",
+    "slug": "kesa-no-karada",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "healthassistant",
+    "scheme": "kesanokarada",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.goma-b.healthassistant",
+      "bundleIdentifier": "com.goma-b.kesanokarada",
       "infoPlist": {
         "NSHealthShareUsageDescription": "体重・歩数・睡眠・心拍などのヘルスデータを読み取り、トレンド分析と振り返りに使用します。データは端末内で処理されます。"
       },
       "supportsTablet": true
     },
     "android": {
-      "package": "com.goma_b.healthassistant",
+      "package": "com.goma_b.kesanokarada",
       "permissions": [
         "android.permission.health.READ_WEIGHT",
         "android.permission.health.READ_BODY_FAT",
@@ -27,7 +27,7 @@
         "android.permission.health.READ_BASAL_METABOLIC_RATE"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#2a78d6",
+        "backgroundColor": "#e8724a",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -43,7 +43,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#2a78d6",
+          "backgroundColor": "#e8724a",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
