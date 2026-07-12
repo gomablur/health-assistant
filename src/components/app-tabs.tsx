@@ -15,13 +15,17 @@ import { useTheme } from '@/hooks/use-theme';
  *
  * ただし背景色と波紋色はAndroid限定。iOSで backgroundColor を渡すと
  * タブバーが不透明になり、Liquid Glassの透過が効かなくなる。
+ *
+ * 背景に backgroundElement(ページ背景より一段濃い/ダークでは一段明るい)を使うのは、
+ * M3のタブバーに影・境界線のプロパティがなく、サーフェスの分離を明度差(トーナル
+ * エレベーション)でしか出せないため。surface だとページ背景とほぼ同色で境界が消える。
  */
 export default function AppTabs() {
   const theme = useTheme();
   const androidColors =
     Platform.OS === 'android'
       ? {
-          backgroundColor: theme.surface,
+          backgroundColor: theme.backgroundElement,
           rippleColor: theme.tintRipple,
           indicatorColor: theme.backgroundSelected,
         }
