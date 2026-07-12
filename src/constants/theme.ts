@@ -30,6 +30,8 @@ export const Colors = {
     axis: '#c3c2b7',
     border: 'rgba(11,11,11,0.10)',
     tint: '#c14e28',
+    /** Androidの波紋(Material Rippleは半透明で下地に重ねる) */
+    tintRipple: 'rgba(193,78,40,0.20)',
     deltaGood: '#006300',
     deltaBad: '#d03b3b',
     // メトリクス系列色(カテゴリカルスロット、メトリクスごとに固定)
@@ -53,6 +55,7 @@ export const Colors = {
     axis: '#383835',
     border: 'rgba(255,255,255,0.10)',
     tint: '#e56638',
+    tintRipple: 'rgba(229,102,56,0.24)',
     deltaGood: '#0ca30c',
     deltaBad: '#d03b3b',
     seriesWeight: '#e56638',

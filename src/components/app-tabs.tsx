@@ -1,4 +1,5 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Platform } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
 
@@ -8,15 +9,25 @@ import { useTheme } from '@/hooks/use-theme';
  * 注意: ネイティブタブは自前のヘッダーを持たないため、ヘッダーはルートの
  * Stack(src/app/_layout.tsx)が提供している。
  *
- * 選択中タブの色は指定しないとiOSはシステム標準の青、Androidは壁紙由来の
- * Material Youダイナミックカラーになる。どちらもブランド色で上書きする。
- * indicatorColor(Androidの選択ピル)はダイナミックカラーのままだとコーラルの
- * アイコンと衝突するため、ニュートラルなグレーにしている。
+ * 色を指定しないと、iOSはシステム標準の青、Androidは壁紙由来のMaterial You
+ * ダイナミックカラーになる(アイコン・ラベルだけでなく、タブバーの背景=
+ * surfaceContainer と波紋=primary も緑がかる)。すべてブランド色で上書きする。
+ *
+ * ただし背景色と波紋色はAndroid限定。iOSで backgroundColor を渡すと
+ * タブバーが不透明になり、Liquid Glassの透過が効かなくなる。
  */
 export default function AppTabs() {
   const theme = useTheme();
+  const androidColors =
+    Platform.OS === 'android'
+      ? {
+          backgroundColor: theme.surface,
+          rippleColor: theme.tintRipple,
+          indicatorColor: theme.backgroundSelected,
+        }
+      : {};
   return (
-    <NativeTabs tintColor={theme.tint} indicatorColor={theme.backgroundSelected}>
+    <NativeTabs tintColor={theme.tint} {...androidColors}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>ホーム</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
