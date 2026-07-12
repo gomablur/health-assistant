@@ -1,4 +1,5 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Platform } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
 
@@ -7,12 +8,15 @@ import { useTheme } from '@/hooks/use-theme';
  * WebはJS実装(app-tabs.web.tsx)を使う。
  * 注意: ネイティブタブは自前のヘッダーを持たないため、ヘッダーはルートの
  * Stack(src/app/_layout.tsx)が提供している。
- * 選択中タブの色は指定しないとシステム標準の青になるため、ブランド色を渡す。
+ *
+ * 選択中タブの色はiOSだけブランド色にする。指定しないとiOSはシステム標準の青だが、
+ * Androidは壁紙由来のMaterial Youダイナミックカラーになるため、そちらは端末の
+ * テーマに溶け込ませる(「操作系はOSネイティブ」方針)。
  */
 export default function AppTabs() {
   const theme = useTheme();
   return (
-    <NativeTabs tintColor={theme.tint} indicatorColor={theme.backgroundSelected}>
+    <NativeTabs tintColor={Platform.OS === 'ios' ? theme.tint : undefined}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>ホーム</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'house', selected: 'house.fill' }} md="home" />
