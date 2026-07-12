@@ -39,7 +39,15 @@
 - `ios/` `android/` はCNG管理(コミットしない)。config plugin を変えたら
   `npx expo prebuild -p android --no-install` で生成物を確認し、終わったら `rm -rf android`
 - LLMへ送るのは `CoachSummary`(統計値)のみ。日々の生データを端末外に出さない
-- UI方針: 操作系はOSネイティブ(NativeTabs・@expo/ui)、表示系は自前。全面統一はしない
+- UI方針: **OSにしか作れないものだけネイティブ**にする(タブバー=Liquid Glass/M3、
+  ボタン=波紋・触覚)。ネイティブ部品はテーマAPIが歯抜けで、色を一部しか指定できない
+  ものが多い(例: M3セグメントコントロールは選択中の塗りしか指定できず、ラベルが
+  壁紙由来のダイナミックカラーで残る)。**色が完全に制御できない部品は自前実装にする**
+- Androidのネイティブ部品は色を指定しないと壁紙由来のMaterial Youダイナミックカラーに
+  なる。タブバーは tintColor(アイコン・ラベル)だけでなく backgroundColor / rippleColor /
+  indicatorColor も要指定。Alertダイアログの色はJSからは触れない(OS標準のまま許容)
+- 塗り(ボタン・選択中の面)には `tintFill` / `tintOnFill` を使う。`tint`(明るいコーラル)を
+  ダークで塗ると白文字が3.3:1しか取れないため
 - Androidデバッグ実機はMetro接続を `debug_http_host`(Wi-Fi直結)で行う。adb reverse は
   この環境では不安定(BUILD.md トラブルシューティング参照)
 

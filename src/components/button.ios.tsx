@@ -36,7 +36,8 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading 
         modifiers={[
           buttonStyle(variant === 'primary' ? 'glassProminent' : 'glass'),
           controlSize('large'),
-          tint(theme.tint),
+          // primaryは塗りなので塗り用の濃いコーラル、secondaryはラベル色なのでアクセント色
+          tint(variant === 'primary' ? theme.tintFill : theme.tint),
           disabledModifier(!!(disabled || loading)),
         ]}
       />

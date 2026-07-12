@@ -27,13 +27,13 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading 
       disabled={dimmed}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: primary ? theme.tint : theme.backgroundElement },
+        { backgroundColor: primary ? theme.tintFill : theme.backgroundElement },
         (pressed || dimmed) && { opacity: pressed ? 0.75 : 0.45 },
       ]}>
       {loading ? (
-        <ActivityIndicator color={primary ? '#ffffff' : theme.text} />
+        <ActivityIndicator color={primary ? theme.tintOnFill : theme.text} />
       ) : (
-        <ThemedText type="smallBold" style={{ color: primary ? '#ffffff' : theme.text }}>
+        <ThemedText type="smallBold" style={{ color: primary ? theme.tintOnFill : theme.text }}>
           {title}
         </ThemedText>
       )}

@@ -26,7 +26,7 @@ export function Button({ title, onPress, variant = 'primary', disabled, loading 
   const Component = variant === 'primary' ? ComposeButton : OutlinedButton;
   const colors =
     variant === 'primary'
-      ? { containerColor: theme.tint, contentColor: '#ffffff' }
+      ? { containerColor: theme.tintFill, contentColor: theme.tintOnFill }
       : { containerColor: 'transparent', contentColor: theme.tint };
 
   return (

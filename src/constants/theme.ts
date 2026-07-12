@@ -7,8 +7,11 @@
  * - background / surface / backgroundElement — ページ > カード > 内部要素の3層
  * - series* — メトリクスごとに固定のカテゴリカル色(体重=ブランドコーラル、歩数=緑、…)。
  *   同じメトリクスは画面をまたいでも必ず同じ色にする
- * - tint — 操作系のアクセント。ダークは体重色と同一、ライトのみ白文字4.5:1を
- *   確保するため一段濃いコーラルにしている
+ * - tint — 操作系のアクセント(文字・アイコン・線)。ダークは体重色と同一、
+ *   ライトのみ白文字4.5:1を確保するため一段濃いコーラルにしている
+ * - tintFill / tintOnFill — 「塗り」とその上に乗る文字の色(ボタン、選択中の
+ *   セグメント)。ダークで tint(明るいコーラル)を塗ると白文字が3.3:1しか
+ *   取れないため、塗りは両モードとも濃いコーラルで固定し白文字4.8:1を確保する
  * - deltaGood / deltaBad — 変化の良し悪しの色。方向(上下)ではなく意味で使う
  */
 
@@ -30,6 +33,8 @@ export const Colors = {
     axis: '#c3c2b7',
     border: 'rgba(11,11,11,0.10)',
     tint: '#c14e28',
+    tintFill: '#c14e28',
+    tintOnFill: '#ffffff',
     /** Androidの波紋(Material Rippleは半透明で下地に重ねる) */
     tintRipple: 'rgba(193,78,40,0.20)',
     deltaGood: '#006300',
@@ -55,6 +60,8 @@ export const Colors = {
     axis: '#383835',
     border: 'rgba(255,255,255,0.10)',
     tint: '#e56638',
+    tintFill: '#c14e28',
+    tintOnFill: '#ffffff',
     tintRipple: 'rgba(229,102,56,0.24)',
     deltaGood: '#0ca30c',
     deltaBad: '#d03b3b',
