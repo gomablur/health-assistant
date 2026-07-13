@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # Android実機のMetro接続先をこのMacのLAN IPに書き込む(Mac上でUSB接続して実行)。
 #
-# なぜ必要か: RNデバッグビルドの既定の接続先は localhost:8081(= adb reverse前提)だが、
+# 位置づけ: **保険**。expo-dev-client のランチャーUIから接続先を選べるので、通常は不要。
+# ランチャーでうまく繋がらないときの復旧手段として使う。
+#
+# なぜ効くか: RNデバッグビルドの既定の接続先は localhost:8081(= adb reverse前提)だが、
 # この構成では adb reverse トンネルが不安定で、応答が来ないままアプリが無言でスプラッシュ
-# 固まりする(readTimeout が無限のため)。そこでアプリの SharedPreferences にある
-# debug_http_host(接続先の最優先オーバーライド)へ Mac の LAN IP を書き込み、
-# Wi-Fi 直結にする。書き込みは1回で永続し、アプリを入れ直すまで有効。
+# 固まりする(readTimeout が無限のため)。アプリの SharedPreferences にある
+# debug_http_host(接続先の最優先オーバーライド)へ Mac の LAN IP を書き込み、Wi-Fi直結にする。
+#
+# 前提: **アプリがインストール済みであること**(run-as はインストール済みのデバッグ版
+# アプリ領域にしか入れない)。したがってビルド前ではなく、ビルド後に実行する。
 #
 # 使い方:
 #   npm run android:metro-host              # IPを自動検出(en0→en1)
@@ -24,6 +29,12 @@ fi
 
 if ! adb get-state >/dev/null 2>&1; then
   echo "Android実機が見つかりません。USBで接続してUSBデバッグを有効にしてください。" >&2
+  exit 1
+fi
+
+if ! adb shell pm list packages | grep -q "^package:${PKG}$"; then
+  echo "アプリ($PKG)が実機にインストールされていません。" >&2
+  echo "先に 'npm run device:android' でインストールしてから、もう一度実行してください。" >&2
   exit 1
 fi
 

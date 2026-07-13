@@ -108,21 +108,21 @@ npm run device:android
 
 初回起動時に Health Connect の読み取り許可を求めます。
 
-> **Metro への接続方式**: デバッグビルドの既定は `localhost:8081`(USB トンネル
+> **Metro への接続方式**: アプリを開くと dev client のランチャーが出るので、
+> そこで接続先(LAN 上の Metro / トンネルURL)を選びます。USB は不要です。
+>
+> ランチャーからどうしても繋がらないときの**保険**として、接続先を直接
+> 書き込むスクリプトを残してあります(アプリの `debug_http_host` に Mac の
+> LAN IP を書く。**アプリがインストール済みでないと実行できません**):
+>
+> ```bash
+> npm run android:metro-host                 # IPを自動検出
+> npm run android:metro-host -- 192.168.x.x  # 手動指定
+> ```
+>
+> 背景: デバッグビルドの既定の接続先は `localhost:8081`(USB トンネル
 > `adb reverse` 前提)ですが、この方式は端末によってトンネルが無言で切れ、
-> スプラッシュ画面のままフリーズします(実測: OPPO CPH2309 / Android 12)。
-> そのため `device:android` はビルド前に **Mac の LAN IP をアプリの接続先として
-> 書き込みます**(内部で `npm run android:metro-host` を実行)。
->
-> 一度書き込めば以降の日々の開発は USB 不要: `npm start` で Metro を起動して
-> アプリを開くだけで、Wi-Fi 経由で接続・リロードされます。
-> **Mac の IP が変わった時・アプリを入れ直した時**だけ、USB を挿して
-> `npm run android:metro-host` を再実行してください
-> (IP の手動指定は `npm run android:metro-host -- 192.168.x.x`)。
->
-> なお `expo-dev-client` を入れて以降は、起動画面のランチャーから接続先を
-> 選べる(LAN の Metro が一覧に出る / URL手入力もできる)ので、この書き込みは
-> **保険**の位置づけです。うまく繋がらないときの復旧手段として残しています。
+> スプラッシュのままフリーズします(実測: OPPO CPH2309 / Android 12)。
 
 **スタンドアロン / 配布**: Android は EAS Build の無料枠で **Google Play アカウント不要**の
 インストール可能な APK を作れます(要 `npm i -g eas-cli` と Expo アカウント):

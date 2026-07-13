@@ -17,7 +17,7 @@
     "lint": "expo lint",
     "prebuild:clean": "expo prebuild --clean",
     "device:ios": "expo run:ios --device",
-    "device:android": "npm run android:metro-host && expo run:android --device",
+    "device:android": "expo run:android --device",
     "android:metro-host": "bash scripts/android-metro-host.sh",
     "standalone:ios": "expo run:ios --device --configuration Release",
     "standalone:android": "expo run:android --device --variant release",
