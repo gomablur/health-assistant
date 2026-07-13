@@ -102,7 +102,8 @@ describe('今朝の解釈(このアプリの核)', () => {
     expect(brief.headline.kind).toBe('weight-suspect');
     const all = [brief.headline, ...brief.items].map((f) => f.kind);
     expect(all).not.toContain('weight-noise'); // 「ノイズです」と言ってはいけない
-    expect(brief.headline.detail).toContain('もう一度測って');
+    // 外れ値の除去はうちの責務ではない。責務のあるOSのヘルスアプリへ案内する
+    expect(brief.headline.detail).toContain('削除してください');
   });
 
   it('日数が空いていれば大きな変化でも計測ミス扱いしない', () => {
