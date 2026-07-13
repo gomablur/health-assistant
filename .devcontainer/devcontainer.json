@@ -15,12 +15,16 @@
 		}
 	},
 
-	// React Native DevTools(Electron製)は Chromium の SUID sandbox を要求するが、
-	// コンテナ内の非rootユーザーでは chrome-sandbox を root所有 4755 にできず
-	// 「The SUID sandbox helper binary ... is not configured correctly」で異常終了する。
-	// コンテナ自体が隔離環境なのでサンドボックスは不要 → 無効化する。
+	// React Native DevTools(Electron製)は起動画面(GUI)を開くツールで、
+	// ヘッドレスなコンテナでは使えない。それでも `expo start` は起動時に
+	// バックグラウンドで準備を始め、Chromium の SUID sandbox 要件
+	// (chrome-sandbox が root所有・4755)を満たせず異常終了してエラーを吐く。
+	// ELECTRON_DISABLE_SANDBOX ではこの検査を回避できなかったため、
+	// Expo CLI に「ヘッドレス環境」と伝えて準備自体をスキップさせる
+	// (@expo/cli の envIsHeadless() → enableStandaloneFuseboxShell: false)。
+	// デバッグUIが要るときは Mac 側の Metro を使う。
 	"containerEnv": {
-		"ELECTRON_DISABLE_SANDBOX": "1"
+		"EXPO_UNSTABLE_HEADLESS": "1"
 	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
