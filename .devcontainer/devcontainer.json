@@ -15,6 +15,14 @@
 		}
 	},
 
+	// React Native DevTools(Electron製)は Chromium の SUID sandbox を要求するが、
+	// コンテナ内の非rootユーザーでは chrome-sandbox を root所有 4755 にできず
+	// 「The SUID sandbox helper binary ... is not configured correctly」で異常終了する。
+	// コンテナ自体が隔離環境なのでサンドボックスは不要 → 無効化する。
+	"containerEnv": {
+		"ELECTRON_DISABLE_SANDBOX": "1"
+	},
+
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 	},
