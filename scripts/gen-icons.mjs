@@ -69,7 +69,12 @@ const CLEAR = [0, 0, 0, 0];
 // 透明背景のレイヤー(Androidの前景・スプラッシュ)に丘を置くと下端で切れて
 // 破綻するため、そこでは朝日だけを使う。
 const HILL = { y0: 58, y1: 76 }; // 稜線: 左端の高さ → 右端の高さ
-const SUN = { x: 58, y: 34, r: 11, rayIn: 15, rayOut: 20, rayHw: 2.1, rays: 8 };
+// 朝日の位置は Android アダプティブアイコンのセーフゾーンに光線まで収める必要がある。
+// セーフゾーンは正方形ではなく**円**(中心50,50・半径33)。前景レイヤーは単独で描かれ、
+// はみ出すとマスク形状によっては光線が切れる。
+// 現在: 中心からの最遠点 32.1 < 33 で収まり、かつ丘の稜線(この範囲で最高y=64)にも触れない。
+// SUNを動かしたら scripts の検証(gen-icons の出力を測る)をやり直すこと
+const SUN = { x: 56, y: 40, r: 10, rayIn: 13.5, rayOut: 17.5, rayHw: 2, rays: 8 };
 
 /** 丘の稜線の高さ(論理x → 論理y)。smoothstepで両端が水平に落ち着く */
 const hillY = (x) => {
@@ -222,9 +227,13 @@ const targets = [
 
   // Android adaptive icon: 丘は「風景」なので背景レイヤーに入れる(全面ブリードで、
   // マスクやパララックスで端が動いても成立する)。前景はセーフゾーンに収める必要が
-  // あるので、そこに丘を入れると下端で切れて破綻する → 前景は朝日だけ
+  // あるので、そこに丘を入れると下端で切れて破綻する → 前景は朝日だけ。
+  //
+  // **前景の朝日は風景内の位置のまま**(中央寄せにしない)。前景と背景は重ねて
+  // 合成されるので、中央に置くと丘の稜線と重なる。iOSの絵柄とも位置が揃う
   ["assets/images/android-icon-background.png", drawIcon(1024, { sun: false })],
-  ["assets/images/android-icon-foreground.png", drawIcon(1024, { bg: "transparent", hill: false, pad: 6, centerSun: true })],
+  ["assets/images/android-icon-foreground.png", drawIcon(1024, { bg: "transparent", hill: false })],
+  // モノクロームだけは中央寄せ。テーマ適用時は丘が描かれず朝日だけが単独で出るため
   ["assets/images/android-icon-monochrome.png", drawIcon(1024, { bg: "transparent", hill: false, pad: 6, centerSun: true })],
 
   // スプラッシュ: 背景色(app.json)の上に白の朝日だけ。丘は下端まで塗る形なので、
