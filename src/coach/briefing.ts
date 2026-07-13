@@ -770,7 +770,8 @@ function correlation(
   if (!best || Math.abs(best.r) < 0.3) return null;
   const negative = best.r < 0;
   const direction = negative ? '減りやすい' : '増えやすい';
-  const lagText = best.lagDays === 0 ? '当日' : `${best.lagDays}日後`;
+  // ラグは1以上(体重は歩く前の朝に測るため。insights.ts の stepsWeightLink 参照)
+  const lagText = best.lagDays === 1 ? '翌朝' : `${best.lagDays}日後`;
   return {
     kind: 'correlation',
     priority: 45,

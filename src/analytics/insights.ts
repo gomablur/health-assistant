@@ -69,16 +69,27 @@ export function weekOverWeek(points: DailyPoint[], endISO = todayISO()): MetricW
 }
 
 export interface ActivityWeightLink {
-  /** 歩数と体重変化のうち |r| 最大の相関(ラグ0〜7日を走査) */
+  /** 歩数と体重変化のうち |r| 最大の相関(ラグ1〜7日を走査) */
   r: number;
+  /** 歩数の何日後の体重変化と相関したか。最小は1(理由は下記) */
   lagDays: number;
   n: number;
 }
+
+/** 走査するラグの下限。0にしてはいけない(理由は stepsWeightLink のコメント)。 */
+const MIN_LAG_DAYS = 1;
+const MAX_LAG_DAYS = 7;
 
 /**
  * 歩数と相関させるのは体重の絶対値ではなく「前回計測からの変化量」。
  * 絶対値はトレンド自体に引きずられて見かけの相関が出てしまうため。
  * `minPairs` 未満のペア数しか揃わないラグは採用しない。
+ *
+ * **ラグは1日以上しか見ない。** 体重は毎朝(その日歩く前)に計測するので、今朝の
+ * 体重変化が反映しているのは前日の活動である。ラグ0は「今日これから歩く歩数」と
+ * 「今朝すでに出ている体重変化」を突き合わせることになり、因果として成立しない。
+ * 実際これを許すと「よく歩いた0日後に体重が増加する傾向」という逆因果
+ * (=重かった日はあまり歩かなかった、の裏返し)を最大相関として拾ってしまう。
  */
 export function stepsWeightLink(
   weight: DailyPoint[],
@@ -90,7 +101,7 @@ export function stepsWeightLink(
     deltas.push({ date: weight[i].date, value: weight[i].value - weight[i - 1].value });
   }
   let best: ActivityWeightLink | null = null;
-  for (let lag = 0; lag <= 7; lag++) {
+  for (let lag = MIN_LAG_DAYS; lag <= MAX_LAG_DAYS; lag++) {
     const c = correlateDaily(deltas, steps, lag);
     if (c && c.n >= minPairs && (!best || Math.abs(c.r) > Math.abs(best.r))) {
       best = { r: c.r, lagDays: lag, n: c.n };

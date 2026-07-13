@@ -222,7 +222,9 @@ export default function WeightScreen() {
           </CardTitle>
           <ThemedText>
             {describeCorrelation(link.r)}
-            {link.lagDays > 0 ? `(${link.lagDays}日後に反映される傾向)` : ''}
+            {link.lagDays === 1
+              ? '(翌朝の体重に反映される傾向)'
+              : `(${link.lagDays}日後に反映される傾向)`}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             相関は因果関係を保証するものではありませんが、生活のヒントになります。
