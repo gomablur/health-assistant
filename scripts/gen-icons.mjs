@@ -91,10 +91,29 @@ const hillY = (x) => {
  * @param {boolean} opts.hill 丘を描くか(全面ブリード。透明背景レイヤーでは false)
  * @param {boolean} opts.sun 朝日を描くか
  */
+/**
+ * Androidのアダプティブアイコンは 108dp のキャンバスのうち中央 72dp しか表示されない
+ * (残りはマスクとパララックスの余白)。ランチャーはそこを切り出して拡大するため、
+ * キャンバス全体に描いた絵は 108/72 = 1.5倍にズームされて見える。
+ * iOSはキャンバス全体がそのまま出るので、同じ座標で描くと Android だけ絵が大きくなる。
+ * → Android用レイヤーは絵を 72/108 に縮小して描き、切り出し後に iOS と揃える。
+ */
+const ADAPTIVE_SCALE = 72 / 108;
+
 function drawIcon(
   size,
-  { bg = "gradient", pad = 0, glyphColor = WHITE, hill = true, sun = true, centerSun = false } = {},
+  {
+    bg = "gradient",
+    pad = 0,
+    glyphColor = WHITE,
+    hill = true,
+    sun = true,
+    centerSun = false,
+    scale = 1,
+  } = {},
 ) {
+  // 中心(50,50)を固定して論理座標を拡大縮小する
+  const sc = (v) => 50 + (v - 50) * scale;
   const S = 4;
   const W = size * S;
   const buf = new Uint8Array(W * W * 4); // 透明で初期化
@@ -165,22 +184,34 @@ function drawIcon(
     for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) px(x, y, bgAt(x, y));
 
   // 2. 丘(稜線=EWMAトレンド曲線。稜線より下をすべて塗る)。
-  //    padは無視して全面ブリードさせる — 風景なので端で切れて構わない
+  //    padは無視して全面ブリードさせる — 風景なので端で切れて構わない。
+  //    scale<1 のときは稜線も中心基準で縮む(=引きの絵になり、S字の両端まで見える)
   if (hill) {
     for (let y = 0; y < W; y++)
       for (let x = 0; x < W; x++) {
         const lx = (x / W) * 100;
-        if (y >= (hillY(lx) / 100) * W && (bg !== "rounded" || bgAt(x, y)[3] > 0)) {
+        const ridge = sc(hillY(50 + (lx - 50) / scale)); // 縮小後の座標系での稜線
+        if (y >= (ridge / 100) * W && (bg !== "rounded" || bgAt(x, y)[3] > 0)) {
           px(x, y, glyphColor);
         }
       }
   }
 
-  // 3. 朝日(円盤+放射状の光線)。セーフゾーン(pad)に収まる主役。
-  //    丘のない単体レイヤー(スプラッシュ・Android前景)では中央に置く —
-  //    風景の中での位置(右上)のままだと、単体で見たとき偏って見える
+  // 3. 朝日(円盤+放射状の光線)。
+  //    丘のない単体レイヤー(スプラッシュ・モノクローム)では中央に置く —
+  //    風景の中での位置(右上)のままだと、単体で見たとき偏って見える。
+  //    逆にAndroidの前景は背景の丘と重ねて合成されるので、風景内の位置を保つ
   if (sun) {
-    const s = centerSun ? { ...SUN, x: 50, y: 50 } : SUN;
+    const base = centerSun ? { ...SUN, x: 50, y: 50 } : SUN;
+    const s = {
+      x: sc(base.x),
+      y: sc(base.y),
+      r: base.r * scale,
+      rayIn: base.rayIn * scale,
+      rayOut: base.rayOut * scale,
+      rayHw: base.rayHw * scale,
+      rays: base.rays,
+    };
     fillCircle(s, glyphColor);
     for (let i = 0; i < s.rays; i++) {
       const a = (i / s.rays) * Math.PI * 2;
@@ -231,10 +262,11 @@ const targets = [
   //
   // **前景の朝日は風景内の位置のまま**(中央寄せにしない)。前景と背景は重ねて
   // 合成されるので、中央に置くと丘の稜線と重なる。iOSの絵柄とも位置が揃う
-  ["assets/images/android-icon-background.png", drawIcon(1024, { sun: false })],
-  ["assets/images/android-icon-foreground.png", drawIcon(1024, { bg: "transparent", hill: false })],
+  // scale: 中央72dpしか表示されないぶん、絵を縮小して描く(iOSと同じ引きの絵にする)
+  ["assets/images/android-icon-background.png", drawIcon(1024, { sun: false, scale: ADAPTIVE_SCALE })],
+  ["assets/images/android-icon-foreground.png", drawIcon(1024, { bg: "transparent", hill: false, scale: ADAPTIVE_SCALE })],
   // モノクロームだけは中央寄せ。テーマ適用時は丘が描かれず朝日だけが単独で出るため
-  ["assets/images/android-icon-monochrome.png", drawIcon(1024, { bg: "transparent", hill: false, pad: 6, centerSun: true })],
+  ["assets/images/android-icon-monochrome.png", drawIcon(1024, { bg: "transparent", hill: false, centerSun: true, scale: ADAPTIVE_SCALE })],
 
   // スプラッシュ: 背景色(app.json)の上に白の朝日だけ。丘は下端まで塗る形なので、
   // 画面中央に小さく置くと宙に浮いた白い塊になってしまう
