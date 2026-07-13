@@ -27,17 +27,34 @@ import { formatValue } from '@/utils/format';
  */
 
 const KIND_ICON: Record<BriefKind, string> = {
+  // 今朝の解釈
   'weight-noise': '🌊',
-  'weight-streak': '📈',
+  'weight-noise-resolved': '💨',
+  // トレンドの節目
+  'weight-plateau-break': '🎉',
+  'weight-plateau': '🪨',
+  'weight-new-low': '🏔️',
+  'weight-streak': '📉',
   'weight-pace-fast': '⚠️',
+  // からだの変化
+  'sleep-deficit': '😴',
+  'sleep-recovered': '🌙',
+  'heart-elevated': '💗',
+  'heart-recovered': '🫀',
+  // 生活のリズム
+  'steps-surge': '👟',
+  'steps-rise': '🚶',
+  'steps-decline': '🐢',
+  // 計測の習慣
+  'data-ready': '✨',
   'adherence-praise': '🔥',
   'adherence-gap': '📆',
-  'sleep-deficit': '😴',
   'sleep-gap': '⌚',
-  'heart-elevated': '💗',
-  'steps-surge': '👟',
-  'steps-decline': '👟',
+  // 発見
+  'body-recomposition': '🔄',
+  'weekday-pattern': '🗓️',
   correlation: '🔍',
+  // フォールバック
   status: '🧭',
 };
 
