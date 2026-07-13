@@ -65,15 +65,27 @@ npm run start:tunnel   # = expo start --dev-client --tunnel
 
 起動後、実機で:
 
-- **iOS**: カメラで QR を読む(または dev client の画面から接続先を選ぶ)
-- **Android**: dev client の起動画面 → **「Enter URL manually」**に表示された
-  `https://xxxx.exp.direct` を入力(QR読み取りでも可)
+- **iOS**: **標準のカメラアプリ**でターミナルのQRを撮る(アプリのスキームで
+  dev client が開く)。**dev client のランチャー内にQRスキャナはありません** —
+  もう一つの手は「Enter URL manually」に `https://xxxx.exp.direct` を入力
+- **Android**: dev client の起動画面からQRを読み取る(スキャナ内蔵)。
+  「Enter URL manually」でURL直接入力も可
 
 > **なぜ dev client が必要か**: 素の RN デバッグビルドは接続先を `host:port`(http)
 > でしか持てず、https のトンネルURL(443番)には原理的につながりません。
 > `expo-dev-client` を入れると接続先を選ぶランチャーUIが付き、トンネルURL・
 > LAN・QR・ディープリンクのどれでも指定できるようになります。
 > **Android の「サーバー指定が複雑」問題はこれで解消します。**
+
+> **「No script URL provided」** と出てランチャーが表示されない場合、その実機ビルドに
+> `expo-dev-client` が入っていません(=素のRNビルド)。`git pull` 後に
+> **`npm install` を忘れている**のが典型例です。次の順で入れ直してください:
+>
+> ```bash
+> npm install            # expo-dev-client を node_modules に入れる
+> npm run prebuild:clean # ios/ android/ を作り直し、Podsに確実に取り込む
+> npm run device:ios     # (Android は device:android)
+> ```
 
 トンネルは公開URLを経由するぶん LAN 接続より低速です。同じ Wi-Fi にいるときは
 `npm start` を使ってください。
