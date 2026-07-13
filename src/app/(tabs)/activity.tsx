@@ -11,7 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { formatValue, round1 } from '@/utils/format';
 
 /**
- * アクティビティ画面: Apple Watch系データ(歩数・睡眠・アクティブカロリー・
+ * アクティビティ画面: ウェアラブル系データ(歩数・睡眠・アクティブカロリー・
  * 安静時心拍)の7日平均+前週比タイルと、直近14日の日次バーチャート。
  */
 export default function ActivityScreen() {

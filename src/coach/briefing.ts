@@ -692,7 +692,7 @@ function adherence(weight: DailyPoint[], seed: number): BriefFinding | null {
   };
 }
 
-/** 数日間、睡眠が記録されていない(Watchの着け忘れ・充電切れ)。 */
+/** 数日間、睡眠が記録されていない(スマートウォッチの着け忘れ・充電切れ)。 */
 function sleepGap(sleep: DailyPoint[], seed: number): BriefFinding | null {
   if (sleep.length < 5) return null; // 普段から計測している人にだけ意味がある
   const last = sleep[sleep.length - 1];
@@ -709,7 +709,8 @@ function sleepGap(sleep: DailyPoint[], seed: number): BriefFinding | null {
       ],
       seed,
     ),
-    detail: 'Watchの充電と装着を確認してみてください。睡眠は体重の動きを説明する重要なピースです。',
+    detail:
+      'スマートウォッチの充電と装着を確認してみてください。睡眠は体重の動きを説明する重要なピースです。',
   };
 }
 

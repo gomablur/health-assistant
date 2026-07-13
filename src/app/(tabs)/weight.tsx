@@ -6,6 +6,7 @@ import { assessPace, PACE_LABEL, stepsWeightLink, weightInsight } from '@/analyt
 import { movingAverage } from '@/analytics/stats';
 import { Card, CardTitle } from '@/components/card';
 import { WeightTrendChart } from '@/components/charts/weight-trend-chart';
+import { NeedsWeight } from '@/components/needs-weight';
 import { Screen } from '@/components/screen';
 import { Segmented } from '@/components/segmented';
 import { StatTile } from '@/components/stat-tile';
@@ -77,6 +78,16 @@ export default function WeightScreen() {
       : null;
   const adherencePct = Math.round(insight.adherence28 * 100);
   const guide = intakeGuide(basal.data ?? [], active.data ?? []);
+
+  // 体重がなければこの画面は成立しない。空のチャートを見せるより、何をすれば
+  // 使えるようになるかを伝える(体重が主役。docs/BRAND.md)
+  if (!weight.loading && (weight.data?.length ?? 0) === 0) {
+    return (
+      <Screen>
+        <NeedsWeight />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -191,8 +202,8 @@ export default function WeightScreen() {
           </>
         ) : (
           <ThemedText type="small" themeColor="textSecondary">
-            基礎代謝(安静時消費エネルギー)のデータがまだ足りません。Apple
-            Watchを着けていれば自動で記録されます。
+            基礎代謝(安静時消費エネルギー)のデータがまだ足りません。スマートウォッチや
+            活動量計を着けていれば自動で記録されます。
           </ThemedText>
         )}
       </Card>

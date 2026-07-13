@@ -6,6 +6,7 @@ import { assessPace, weightInsight, type Pace } from '@/analytics/insights';
 import { movingAverage } from '@/analytics/stats';
 import { Card, CardTitle } from '@/components/card';
 import { WeightTrendChart } from '@/components/charts/weight-trend-chart';
+import { NeedsWeight } from '@/components/needs-weight';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import type { BriefKind } from '@/coach/briefing';
@@ -138,10 +139,12 @@ export default function HomeScreen() {
   const { brief } = useDailyBrief();
   const [expandedKind, setExpandedKind] = useState<BriefKind | null>(null);
 
+  // 30日ぶん取るのは、値の表示(直近の1点)だけでなく「そもそもこのメトリクスを
+  // 記録する機材を持っているか」を判定するため。1件もなければタイルごと隠す
   const weight = useHealthDaily('weight', 30);
-  const steps = useHealthDaily('steps', 7);
-  const sleep = useHealthDaily('sleep', 7);
-  const heart = useHealthDaily('restingHeartRate', 7);
+  const steps = useHealthDaily('steps', 30);
+  const sleep = useHealthDaily('sleep', 30);
+  const heart = useHealthDaily('restingHeartRate', 30);
 
   const raw = weight.data ?? [];
   const smoothed = movingAverage(raw, 7);
@@ -158,6 +161,11 @@ export default function HomeScreen() {
   const heartRecent = freshPoint(heart.data, 6);
   const stepsToday = freshPoint(steps.data, 0);
 
+  // 「機材を持っていない」と「今日はまだ/たまたま計測がない」を区別する。
+  // 前者はタイルごと隠し(未計測を並べても意味がない)、後者は「未計測」と出す
+  const has = (points: DailyPoint[] | null) => (points?.length ?? 0) > 0;
+  const hasWeight = has(weight.data);
+
   const expanded = brief?.items.find((i) => i.kind === expandedKind) ?? null;
 
   return (
@@ -170,29 +178,33 @@ export default function HomeScreen() {
 
       {/* ヒーロー: 今日の1つの数字と、ひと目でわかる方向 */}
       <View style={styles.hero}>
-        <ThemedText type="small" themeColor="textMuted">
-          トレンド体重
-        </ThemedText>
-        <View style={styles.heroRow}>
-          <ThemedText style={styles.heroValue}>
-            {formatValue(insight.trendWeight, 1) ?? '—'}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.heroUnit}>
-            kg
-          </ThemedText>
-          {visual && (
-            <ThemedText style={[styles.heroArrow, { color: theme[visual.colorKey] }]}>
-              {visual.arrow}
+        {hasWeight && (
+          <>
+            <ThemedText type="small" themeColor="textMuted">
+              トレンド体重
             </ThemedText>
-          )}
-        </View>
-        {insight.slopePerWeek != null && (
-          <View style={[styles.pacePill, { backgroundColor: theme.backgroundElement }]}>
-            <ThemedText type="small" themeColor="textSecondary">
-              週{insight.slopePerWeek >= 0 ? '+' : ''}
-              {insight.slopePerWeek.toFixed(2)}kg
-            </ThemedText>
-          </View>
+            <View style={styles.heroRow}>
+              <ThemedText style={styles.heroValue}>
+                {formatValue(insight.trendWeight, 1) ?? '—'}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.heroUnit}>
+                kg
+              </ThemedText>
+              {visual && (
+                <ThemedText style={[styles.heroArrow, { color: theme[visual.colorKey] }]}>
+                  {visual.arrow}
+                </ThemedText>
+              )}
+            </View>
+            {insight.slopePerWeek != null && (
+              <View style={[styles.pacePill, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  週{insight.slopePerWeek >= 0 ? '+' : ''}
+                  {insight.slopePerWeek.toFixed(2)}kg
+                </ThemedText>
+              </View>
+            )}
+          </>
         )}
         {brief && (
           <ThemedText style={styles.headline}>
@@ -238,42 +250,54 @@ export default function HomeScreen() {
         </Card>
       )}
 
-      <Card>
-        <View style={styles.chartHeader}>
-          <CardTitle hint="直近30日">体重トレンド</CardTitle>
-          <Link href="/weight">
-            <ThemedText type="linkPrimary">詳しく →</ThemedText>
-          </Link>
-        </View>
-        <WeightTrendChart raw={raw} smoothed={smoothed} height={150} />
-      </Card>
+      {hasWeight ? (
+        <Card>
+          <View style={styles.chartHeader}>
+            <CardTitle hint="直近30日">体重トレンド</CardTitle>
+            <Link href="/weight">
+              <ThemedText type="linkPrimary">詳しく →</ThemedText>
+            </Link>
+          </View>
+          <WeightTrendChart raw={raw} smoothed={smoothed} height={150} />
+        </Card>
+      ) : (
+        <NeedsWeight />
+      )}
 
       <Card>
         <View style={styles.miniRow}>
-          <MiniStat
-            label="体重"
-            value={formatValue(insight.latest?.value, 1)}
-            unit="kg"
-            when={insight.latest ? relativeDay(insight.latest.date) : null}
-          />
-          <MiniStat
-            label="歩数"
-            value={formatValue(stepsToday?.value, 0)}
-            unit="歩"
-            when={stepsToday ? '今日' : null}
-          />
-          <MiniStat
-            label="睡眠"
-            value={formatValue(sleepLastNight?.value, 1)}
-            unit="h"
-            when={sleepLastNight ? '昨夜' : null}
-          />
-          <MiniStat
-            label="安静時心拍"
-            value={formatValue(heartRecent?.value, 0)}
-            unit="bpm"
-            when={heartRecent ? relativeDay(heartRecent.date) : null}
-          />
+          {hasWeight && (
+            <MiniStat
+              label="体重"
+              value={formatValue(insight.latest?.value, 1)}
+              unit="kg"
+              when={insight.latest ? relativeDay(insight.latest.date) : null}
+            />
+          )}
+          {has(steps.data) && (
+            <MiniStat
+              label="歩数"
+              value={formatValue(stepsToday?.value, 0)}
+              unit="歩"
+              when={stepsToday ? '今日' : null}
+            />
+          )}
+          {has(sleep.data) && (
+            <MiniStat
+              label="睡眠"
+              value={formatValue(sleepLastNight?.value, 1)}
+              unit="h"
+              when={sleepLastNight ? '昨夜' : null}
+            />
+          )}
+          {has(heart.data) && (
+            <MiniStat
+              label="安静時心拍"
+              value={formatValue(heartRecent?.value, 0)}
+              unit="bpm"
+              when={heartRecent ? relativeDay(heartRecent.date) : null}
+            />
+          )}
         </View>
       </Card>
 
