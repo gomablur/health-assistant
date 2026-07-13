@@ -189,7 +189,12 @@ function drawIcon(
     }
   }
 
-  // ダウンサンプリング (S×S平均)
+  // ダウンサンプリング (S×S平均)。
+  //
+  // RGBは**アルファ加重**で平均する。単純平均にすると、透明ピクセル(RGB=黒・α=0)の
+  // 黒が縁で白と混ざり、グリフの周りに黒いフリンジ(1pxの縁取りに見える)が出る。
+  // 不透明な風景アイコンでは透明部分がないので気づきにくいが、透明背景のレイヤー
+  // (スプラッシュ・Android前景)では露骨に出る。
   const out = Buffer.alloc(size * size * 4);
   for (let y = 0; y < size; y++)
     for (let x = 0; x < size; x++) {
@@ -197,11 +202,15 @@ function drawIcon(
       for (let dy = 0; dy < S; dy++)
         for (let dx = 0; dx < S; dx++) {
           const i = ((y * S + dy) * W + x * S + dx) * 4;
-          r += buf[i]; g += buf[i + 1]; b += buf[i + 2]; a += buf[i + 3];
+          const w = buf[i + 3]; // アルファを重みにする
+          r += buf[i] * w; g += buf[i + 1] * w; b += buf[i + 2] * w; a += w;
         }
       const n = S * S;
       const o = (y * size + x) * 4;
-      out[o] = r / n; out[o + 1] = g / n; out[o + 2] = b / n; out[o + 3] = a / n;
+      if (a > 0) {
+        out[o] = r / a; out[o + 1] = g / a; out[o + 2] = b / a;
+      }
+      out[o + 3] = a / n;
     }
   return encodePng(out, size, size);
 }
