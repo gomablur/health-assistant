@@ -58,27 +58,38 @@ const WHITE = hex("#ffffff");
 const CLEAR = [0, 0, 0, 0];
 
 // ---- 絵柄の形状(論理座標 0-100) ----
-// なだらかに下るトレンド曲線(smoothstepで両端が水平に落ち着く=EWMAが均した線)と、
-// その上の空に昇る朝日(光線つき)。
-const CURVE = { x0: 12, y0: 52, x1: 88, y1: 70, segments: 24 };
-const CURVE_HW = 3.2; // 線の半幅
-const SUN = { x: 67, y: 30, r: 8.5, rayIn: 11.5, rayOut: 15.5, rayHw: 1.7, rays: 8 };
-const curveY = (x) => {
-  const t = Math.max(0, Math.min(1, (x - CURVE.x0) / (CURVE.x1 - CURVE.x0)));
-  const s = t * t * (3 - 2 * t); // smoothstep
-  return CURVE.y0 + (CURVE.y1 - CURVE.y0) * s;
-};
-const curvePoints = () => {
-  const pts = [];
-  for (let i = 0; i <= CURVE.segments; i++) {
-    const x = CURVE.x0 + ((CURVE.x1 - CURVE.x0) * i) / CURVE.segments;
-    pts.push([x, curveY(x)]);
-  }
-  return pts;
+// 朝日と丘の風景。丘の稜線はEWMAトレンド曲線(なだらかに下る)そのもの。
+//
+// 曲線を「線」ではなく「面(丘)」として描くのが要点。太い白線を単体で浮かせると
+// 有機物(ミミズ)に見えるという指摘があり、下を塗って地形にすることで解消した。
+//
+// レイヤーの役割分担:
+//   丘 = 背景・風景(全面ブリード。マスクで切れても成立する)
+//   朝日 = 前景・主役(セーフゾーンに収まる。単体でもブランドが立つ)
+// 透明背景のレイヤー(Androidの前景・スプラッシュ)に丘を置くと下端で切れて
+// 破綻するため、そこでは朝日だけを使う。
+const HILL = { y0: 58, y1: 76 }; // 稜線: 左端の高さ → 右端の高さ
+const SUN = { x: 58, y: 34, r: 11, rayIn: 15, rayOut: 20, rayHw: 2.1, rays: 8 };
+
+/** 丘の稜線の高さ(論理x → 論理y)。smoothstepで両端が水平に落ち着く */
+const hillY = (x) => {
+  const t = Math.max(0, Math.min(1, x / 100));
+  const s = t * t * (3 - 2 * t);
+  return HILL.y0 + (HILL.y1 - HILL.y0) * s;
 };
 
 // ---- 描画 (論理0-100座標、S倍スーパーサンプリングでアンチエイリアス) ----
-function drawIcon(size, { bg = "gradient", pad = 0, glyphColor = WHITE, glyph = true } = {}) {
+/**
+ * @param {object} opts
+ * @param {"gradient"|"transparent"|"rounded"} opts.bg 背景
+ * @param {number} opts.pad セーフゾーン用の余白(論理座標)
+ * @param {boolean} opts.hill 丘を描くか(全面ブリード。透明背景レイヤーでは false)
+ * @param {boolean} opts.sun 朝日を描くか
+ */
+function drawIcon(
+  size,
+  { bg = "gradient", pad = 0, glyphColor = WHITE, hill = true, sun = true, centerSun = false } = {},
+) {
   const S = 4;
   const W = size * S;
   const buf = new Uint8Array(W * W * 4); // 透明で初期化
@@ -148,19 +159,31 @@ function drawIcon(size, { bg = "gradient", pad = 0, glyphColor = WHITE, glyph = 
   if (bg !== "transparent")
     for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) px(x, y, bgAt(x, y));
 
-  if (glyph) {
-    // 2. トレンド曲線(短いカプセルを連ねて滑らかな一本線にする)
-    const pts = curvePoints();
-    for (let i = 0; i < pts.length - 1; i++) fillCapsule(pts[i], pts[i + 1], CURVE_HW, glyphColor);
-    // 3. 朝日(円盤+放射状の光線)
-    fillCircle(SUN, glyphColor);
-    for (let i = 0; i < SUN.rays; i++) {
-      const a = (i / SUN.rays) * Math.PI * 2;
+  // 2. 丘(稜線=EWMAトレンド曲線。稜線より下をすべて塗る)。
+  //    padは無視して全面ブリードさせる — 風景なので端で切れて構わない
+  if (hill) {
+    for (let y = 0; y < W; y++)
+      for (let x = 0; x < W; x++) {
+        const lx = (x / W) * 100;
+        if (y >= (hillY(lx) / 100) * W && (bg !== "rounded" || bgAt(x, y)[3] > 0)) {
+          px(x, y, glyphColor);
+        }
+      }
+  }
+
+  // 3. 朝日(円盤+放射状の光線)。セーフゾーン(pad)に収まる主役。
+  //    丘のない単体レイヤー(スプラッシュ・Android前景)では中央に置く —
+  //    風景の中での位置(右上)のままだと、単体で見たとき偏って見える
+  if (sun) {
+    const s = centerSun ? { ...SUN, x: 50, y: 50 } : SUN;
+    fillCircle(s, glyphColor);
+    for (let i = 0; i < s.rays; i++) {
+      const a = (i / s.rays) * Math.PI * 2;
       const [dx, dy] = [Math.cos(a), Math.sin(a)];
       fillCapsule(
-        [SUN.x + dx * SUN.rayIn, SUN.y + dy * SUN.rayIn],
-        [SUN.x + dx * SUN.rayOut, SUN.y + dy * SUN.rayOut],
-        SUN.rayHw,
+        [s.x + dx * s.rayIn, s.y + dy * s.rayIn],
+        [s.x + dx * s.rayOut, s.y + dy * s.rayOut],
+        s.rayHw,
         glyphColor,
       );
     }
@@ -185,18 +208,26 @@ function drawIcon(size, { bg = "gradient", pad = 0, glyphColor = WHITE, glyph = 
 
 // ---- 出力 (Expo の構成に合わせる) ----
 const targets = [
-  // メインアイコン(iOS以外のフォールバック・ストア用): フルブリード
+  // メインアイコン(iOS以外のフォールバック・ストア用): 風景まるごと
   ["assets/images/icon.png", drawIcon(1024)],
-  // Android adaptive icon: 前景はセーフゾーン(中央66%)に収める
-  ["assets/images/android-icon-foreground.png", drawIcon(1024, { bg: "transparent", pad: 26 })],
-  ["assets/images/android-icon-background.png", drawIcon(1024, { glyph: false })],
-  ["assets/images/android-icon-monochrome.png", drawIcon(1024, { bg: "transparent", pad: 26 })],
-  // スプラッシュ: 白グリフのみ(背景色は app.json 側)
-  ["assets/images/splash-icon.png", drawIcon(512, { bg: "transparent", pad: 4 })],
-  // Web favicon: 角丸スクエア
-  ["assets/images/favicon.png", drawIcon(64, { bg: "rounded", pad: 6 })],
-  // iOS Icon Composer (.icon) のグリフレイヤー(背景色は icon.json 側)
-  ["assets/expo.icon/Assets/glyph.png", drawIcon(1024, { bg: "transparent", pad: 8 })],
+
+  // Android adaptive icon: 丘は「風景」なので背景レイヤーに入れる(全面ブリードで、
+  // マスクやパララックスで端が動いても成立する)。前景はセーフゾーンに収める必要が
+  // あるので、そこに丘を入れると下端で切れて破綻する → 前景は朝日だけ
+  ["assets/images/android-icon-background.png", drawIcon(1024, { sun: false })],
+  ["assets/images/android-icon-foreground.png", drawIcon(1024, { bg: "transparent", hill: false, pad: 6, centerSun: true })],
+  ["assets/images/android-icon-monochrome.png", drawIcon(1024, { bg: "transparent", hill: false, pad: 6, centerSun: true })],
+
+  // スプラッシュ: 背景色(app.json)の上に白の朝日だけ。丘は下端まで塗る形なので、
+  // 画面中央に小さく置くと宙に浮いた白い塊になってしまう
+  ["assets/images/splash-icon.png", drawIcon(512, { bg: "transparent", hill: false, pad: 6, centerSun: true })],
+
+  // Web favicon: 角丸スクエアに風景を収める
+  ["assets/images/favicon.png", drawIcon(64, { bg: "rounded" })],
+
+  // iOS Icon Composer (.icon) のグリフレイヤー(背景色は icon.json 側)。
+  // iOS側でマスクされるので、丘は全面ブリードのままでよい
+  ["assets/expo.icon/Assets/glyph.png", drawIcon(1024, { bg: "transparent" })],
 ];
 for (const [rel, png] of targets) {
   writeFileSync(join(ROOT, rel), png);
