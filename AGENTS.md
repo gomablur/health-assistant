@@ -80,6 +80,9 @@ npm run build:web  # デモサイトを dist/ に出力(モックデータ)
 実機系(Mac側): `npm run device:ios` / `npm run device:android` / `npm start`
 別ネットワークからつなぐときは `npm run start:tunnel`(expo-dev-client のランチャーで接続先を指定)
 
+コンテナからも `npm run start:tunnel` で実機につなげる(トンネル経由)。Metroが起動時に展開する
+React Native DevTools(Electron製)の共有ライブラリは devcontainer.json で導入済み。
+
 ## 規約
 
 - **コードコメント・ドキュメントは日本語**(メンテナーは日本人)。UI文言も日本語
