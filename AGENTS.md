@@ -81,7 +81,10 @@ npm run build:web  # デモサイトを dist/ に出力(モックデータ)
 別ネットワークからつなぐときは `npm run start:tunnel`(expo-dev-client のランチャーで接続先を指定)
 
 コンテナからも `npm run start:tunnel` で実機につなげる(トンネル経由)。Metroが起動時に展開する
-React Native DevTools(Electron製)の共有ライブラリは devcontainer.json で導入済み。
+React Native DevTools(Electron製)に必要な共有ライブラリと chrome-sandbox の setuid は
+devcontainer.json / `scripts/devtools-sandbox.sh` で対応済み。
+**`EXPO_UNSTABLE_HEADLESS=1` は使わないこと** — DevToolsのエラーは消えるが、
+QRコード表示やLAN IP探索まで止まる(自動化ツール向けモードのため)。
 
 ## 規約
 
