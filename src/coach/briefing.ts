@@ -23,6 +23,7 @@ import { addDays, dayIndex, fromISODate, todayISO } from '@/utils/date';
 
 export type BriefKind =
   // 今朝の解釈(このアプリの核)
+  | 'weight-suspect'
   | 'weight-noise'
   | 'weight-noise-resolved'
   // トレンドの節目
@@ -139,7 +140,45 @@ function slopeOverWindow(
   return linearTrend(window)?.slopePerWeek ?? null;
 }
 
+/**
+ * 一晩で動きうる体重の上限(kg)。水分・食事の揺れはここまで。これを超える変化は
+ * 生理的にあり得ない(脂肪1kgの増減に約7,000kcalが必要)ので、計測ミスを疑う。
+ */
+const IMPLAUSIBLE_DAILY_DELTA = 3.0;
+
 // --- ルール: 今朝の解釈 --------------------------------------------------------
+
+/**
+ * 生理的にあり得ない変化 = 計測ミス(別の人が乗った・服のまま・体重計の故障)。
+ *
+ * これを黙って「水分の揺れです」と説明してしまうと嘘になるし、放置すると
+ * トレンドが数週間にわたって汚染される。事実だけを伝えて、判断はユーザーに委ねる
+ * (「誤りだ」と断定はしない。本当に増えた可能性を否定はできないため)。
+ */
+function weightSuspect(weight: DailyPoint[], seed: number): BriefFinding | null {
+  if (weight.length < 2) return null;
+  const latest = weight[weight.length - 1];
+  const prev = weight[weight.length - 2];
+  const gapDays = dayIndex(latest.date) - dayIndex(prev.date);
+  if (gapDays > 2) return null; // 期間が空いていれば大きな変化もあり得る
+  const delta = latest.value - prev.value;
+  if (Math.abs(delta) < IMPLAUSIBLE_DAILY_DELTA) return null;
+
+  return {
+    kind: 'weight-suspect',
+    priority: 92,
+    chip: '要確認',
+    message: pick(
+      [
+        `前回から${signed(delta)}kgの変化です。${gapDays === 1 ? '一晩' : '2日'}でこれだけ動くのは、計測ミスかもしれません。`,
+        `${kg(latest.value)}という値は、前回から${signed(delta)}kg。少し確かめたほうがよさそうです。`,
+      ],
+      seed,
+    ),
+    detail:
+      '別の人が乗った、服を着たまま測った、電池が弱っている、といった原因が考えられます。一晩で3kgを超える増減は水分でも説明がつきません(脂肪1kgの増減には約7,000kcalが必要です)。心当たりがなければ、もう一度測ってみてください。この値はトレンドを大きく歪めます。',
+  };
+}
 
 /**
  * 昨日跳ねた体重が、今朝きれいに戻った — このアプリの主張(日々の上下は天気、
@@ -186,6 +225,8 @@ function weightNoise(weight: DailyPoint[], seed: number): BriefFinding | null {
   if (gapDays > 3) return null;
   const deltaRaw = latest.value - prev.value;
   if (Math.abs(deltaRaw) < 0.5) return null;
+  // あり得ない大きさの変化を「水分です」と説明したら嘘になる(weightSuspect の担当)
+  if (Math.abs(deltaRaw) >= IMPLAUSIBLE_DAILY_DELTA) return null;
 
   const smoothed = ewma(weight, 7);
   const trendNow = smoothed[smoothed.length - 1].value;
@@ -401,6 +442,9 @@ function sleepDeficit(sleep: DailyPoint[], seed: number): BriefFinding | null {
   const today = todayISO();
   // 古いデータで警告しない(直近の記録が今日か昨日のときだけ)
   if (dayIndex(today) - dayIndex(recent[recent.length - 1].date) > 1) return null;
+  // 「3日続けて」と言う以上、本当に連日でなければならない。Watchを外した日が
+  // あると直近3件が飛び飛びになり、実際には連続していない3晩を連続と誤認する
+  if (dayIndex(recent[2].date) - dayIndex(recent[0].date) !== 2) return null;
   if (!recent.every((p) => p.value < 6)) return null;
   const avg = mean(recent.map((p) => p.value))!;
   return {
@@ -684,6 +728,9 @@ function bodyRecomposition(
   const fatTrend = linearTrend(fat28);
   if (!fatTrend || fatTrend.slopePerWeek == null) return null;
   if (fatTrend.slopePerWeek > -0.1) return null; // 体脂肪率が落ちていない
+  // 家庭用体重計の体脂肪率は測定ノイズが大きい。当てはまりの悪い回帰を根拠に
+  // 「中身が変わっています」と断言してはいけない
+  if (fatTrend.r2 < 0.25) return null;
 
   const insight = weightInsight(weight);
   if (insight.slopePerWeek == null) return null;
@@ -816,15 +863,34 @@ function status(series: BriefSeries, seed: number): BriefFinding {
       detail: '変化のない日は、うまくいっている日です。続けることそのものが効いています。',
     };
   }
-  const n = series.weight.length;
+  // ここに来るのは「トレンドを出せるだけの新しいデータがない」ケース。
+  // 計測回数だけで文面を決めると、昔たくさん測ってやめた人に「あと-13日」などと
+  // 言ってしまうので、直近28日に何日ぶんあるかで判断する
+  const last28 = lastDays(series.weight, 28, todayISO()).length;
+  if (series.weight.length === 0) {
+    return {
+      kind: 'status',
+      priority: 10,
+      chip: 'はじめの一歩',
+      message: 'まだ体重の記録がありません。まずは明日の朝、体重計に乗ってみてください。',
+      detail:
+        '7日分あれば、日々の上下(水分の揺れ)と本当の変化を切り分けられるようになります。それまではただ乗るだけで十分です。',
+    };
+  }
+  if (last28 === 0) {
+    return {
+      kind: 'status',
+      priority: 10,
+      chip: 'おかえり',
+      message: 'しばらく計測が空いています。今朝から、また一緒に見ていきましょう。',
+      detail: '過去のデータは残っています。数日乗ればトレンドはすぐ戻ってきます。',
+    };
+  }
   return {
     kind: 'status',
     priority: 10,
     chip: 'はじめの一歩',
-    message:
-      n === 0
-        ? 'まだ体重の記録がありません。まずは明日の朝、体重計に乗ってみてください。'
-        : `計測${n}日目。あと${Math.max(1, 7 - n)}日ぶんたまると、ノイズをならしたトレンドが見えてきます。`,
+    message: `計測${last28}日目。あと${Math.max(1, 7 - last28)}日ぶんたまると、ノイズをならしたトレンドが見えてきます。`,
     detail:
       '7日分あれば、日々の上下(水分の揺れ)と本当の変化を切り分けられるようになります。それまではただ乗るだけで十分です。',
   };
@@ -852,6 +918,7 @@ export function buildDailyBrief(series: BriefSeries, options?: BriefOptions): Da
 
   const ranked = [
     // 今朝の解釈
+    weightSuspect(series.weight, seed),
     weightNoiseResolved(series.weight, seed),
     weightNoise(series.weight, seed),
     // トレンドの節目

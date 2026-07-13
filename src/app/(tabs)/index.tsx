@@ -28,6 +28,7 @@ import { formatValue } from '@/utils/format';
 
 const KIND_ICON: Record<BriefKind, string> = {
   // 今朝の解釈
+  'weight-suspect': '❓',
   'weight-noise': '🌊',
   'weight-noise-resolved': '💨',
   // トレンドの節目

@@ -46,6 +46,19 @@ describe('buildDailyBrief — 基本', () => {
     expect(brief.headline.message).toContain('体重計');
   });
 
+  it('昔たくさん測ってやめた人に「あと-13日」のような案内をしない', () => {
+    // 40〜60日前に20日ぶん計測して、それきり。計測空き(adherence-gap)が昨日の
+    // ヘッドラインだったので、今日は現状報告(status)に落ちる経路をたどる
+    const old = ending(flat(20, 72)).map((p) => ({ ...p, date: addDays(p.date, -40) }));
+    const brief = buildDailyBrief(
+      { weight: old, steps: [], sleep: [], restingHeartRate: [] },
+      { seed: 0, yesterdayKind: 'adherence-gap' },
+    );
+    expect(brief.headline.kind).toBe('status');
+    expect(brief.headline.message).not.toMatch(/あと-/);
+    expect(brief.headline.message).toContain('また一緒に');
+  });
+
   it('シードで言い回しがローテーションする', () => {
     const series = baseSeries();
     const a = buildDailyBrief(series, { seed: 0 }).headline.message;
@@ -80,6 +93,26 @@ describe('今朝の解釈(このアプリの核)', () => {
     // 昨日+0.9のあと、今朝もほぼ同じ高さ(72.8)
     const weight = ending([...flat(28, 72), 72.9, 72.8]);
     expect(kinds(baseSeries({ weight }))).not.toContain('weight-noise-resolved');
+  });
+
+  it('あり得ない大きさの変化を「水分です」と説明しない(計測ミスを疑う)', () => {
+    // 一晩で+8kg = 別の人が乗った / 服のまま測った / 体重計の故障
+    const weight = ending([...flat(29, 72), 80]);
+    const brief = buildDailyBrief(baseSeries({ weight }), { seed: 0 });
+    expect(brief.headline.kind).toBe('weight-suspect');
+    const all = [brief.headline, ...brief.items].map((f) => f.kind);
+    expect(all).not.toContain('weight-noise'); // 「ノイズです」と言ってはいけない
+    expect(brief.headline.detail).toContain('もう一度測って');
+  });
+
+  it('日数が空いていれば大きな変化でも計測ミス扱いしない', () => {
+    // 20日ぶりの計測で+4kg は普通にあり得る
+    const today = todayISO();
+    const weight = [
+      ...ending(flat(10, 72)).map((p) => ({ ...p, date: addDays(p.date, -20) })),
+      { date: today, value: 76 },
+    ];
+    expect(kinds(baseSeries({ weight }))).not.toContain('weight-suspect');
   });
 });
 
@@ -149,6 +182,18 @@ describe('からだの変化(イベントは開いたら閉じる)', () => {
     const sleep = ending([...flat(27, 7), 5.5, 5.8, 5.2]);
     const brief = buildDailyBrief(baseSeries({ sleep }), { seed: 0 });
     expect(brief.headline.kind).toBe('sleep-deficit');
+  });
+
+  it('飛び飛びの3晩を「3日続けて」と言わない(Watchを外した日がある場合)', () => {
+    // 直近3件は短時間だが、-4日と-2日と今日 = 連続していない
+    const today = todayISO();
+    const sleep = [
+      ...ending(flat(20, 7)).slice(0, 17),
+      { date: addDays(today, -4), value: 5.5 },
+      { date: addDays(today, -2), value: 5.6 },
+      { date: today, value: 5.4 },
+    ];
+    expect(kinds(baseSeries({ sleep }))).not.toContain('sleep-deficit');
   });
 
   it('睡眠不足のあと眠れるようになったら、それも伝える', () => {
@@ -237,6 +282,12 @@ describe('発見', () => {
 
   it('体脂肪率のデータがなければ体組成の所見は出さない(スマート体重計は必須ではない)', () => {
     expect(kinds(baseSeries())).not.toContain('body-recomposition');
+  });
+
+  it('体脂肪率がノイズだらけなら「中身が変わった」と断言しない', () => {
+    // 家庭用体重計にありがちな、傾向とは呼べないギザギザ(当てはまりが悪い)
+    const bodyFat = ending(flat(30, 22).map((v, i) => v - i * 0.03 + (i % 2 ? 2.5 : -2.5)));
+    expect(kinds(baseSeries({ bodyFat }))).not.toContain('body-recomposition');
   });
 
   /** 84日ぶんの体重。指定した曜日だけ +0.6kg 重く出る(全体はゆるやかに減少) */
