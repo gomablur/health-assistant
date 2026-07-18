@@ -24,11 +24,12 @@
 
 	// `expo start` は起動時に React Native DevTools(Electron製)を裏で準備する。
 	// これを動かすためにコンテナ側で2つ必要:
-	//   1. apt パッケージ群 = Electron(Chromium)が要求する共有ライブラリ。
+	//   1. apt パッケージ群 = Electron(Chromium)が要求する共有ライブラリ。ここで入れる。
 	//      無いと「error while loading shared libraries: libnspr4.so」で失敗する
-	//   2. devtools-sandbox.sh = chrome-sandbox に setuid root を付ける(詳細は同スクリプト)
-	// どちらも欠けると expo start のたびにエラーが出る(Metro自体は動くが騒がしい)。
-	"postCreateCommand": "sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y libnss3 libnspr4 libatk1.0-0t64 libatk-bridge2.0-0t64 libatspi2.0-0t64 libcups2t64 libdbus-1-3 libgbm1 libgtk-3-0t64 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libasound2t64 && bash scripts/devtools-sandbox.sh",
+	//   2. chrome-sandbox の setuid root = scripts/devtools-sandbox.sh。ただし DevTools は
+	//      初回 `expo start` 時に遅延ダウンロードされ、postCreate 時点(npm install 前)
+	//      には存在しないため、ここではなく `npm start` の直前で実行する(package.json)。
+	"postCreateCommand": "sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y libnss3 libnspr4 libatk1.0-0t64 libatk-bridge2.0-0t64 libatspi2.0-0t64 libcups2t64 libdbus-1-3 libgbm1 libgtk-3-0t64 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libasound2t64",
 
 	// Configure tool-specific properties.
 	// "customizations": {},
