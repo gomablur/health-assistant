@@ -19,6 +19,9 @@ interface Props {
 }
 
 const Y_LABEL_WIDTH = 40;
+// X軸ラベル('M/D' 最大5文字)が収まる幅。既定は棒幅+隙間しかなく
+// 「7/...」と省略されてしまう
+const X_LABEL_WIDTH = 30;
 // ツールチップ(2行+余白)が棒の上に収まるのに必要な高さの見積もり。
 // 棒の上端からチャート上端までがこれより狭ければ、棒の内側に反転表示する
 const TOOLTIP_CLEARANCE = 64;
@@ -91,7 +94,14 @@ export function DailyBarChart({ points, days, color, unit, digits = 0, height = 
           noOfSections={3}
           yAxisLabelWidth={Y_LABEL_WIDTH}
           yAxisTextStyle={{ color: theme.textMuted, fontSize: 10 }}
-          xAxisLabelTextStyle={{ color: theme.textMuted, fontSize: 10 }}
+          labelWidth={X_LABEL_WIDTH}
+          // labelWidth で広がったコンテナは右に伸びるので、負のマージンで
+          // ラベル中心を棒の中心に合わせる
+          xAxisLabelTextStyle={{
+            color: theme.textMuted,
+            fontSize: 10,
+            marginLeft: -(X_LABEL_WIDTH - barWidth),
+          }}
           rulesColor={theme.grid}
           rulesType="solid"
           yAxisThickness={0}

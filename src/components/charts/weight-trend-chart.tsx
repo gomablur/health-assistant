@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 
 import { ThemedText } from '@/components/themed-text';
@@ -19,6 +19,9 @@ interface Props {
 
 const CHART_HEIGHT = 220;
 const Y_LABEL_WIDTH = 36;
+// X軸ラベル('M/D' 最大5文字)が収まる幅。ライブラリ既定のラベル幅は
+// 点間隔(数px)しかなく「7...」と省略されてしまうため、明示的に広げる
+const X_LABEL_WIDTH = 34;
 
 /**
  * 体重の推移チャート: 実測値は控えめなドット、7日移動平均を2pxの主役ラインで
@@ -65,13 +68,41 @@ export function WeightTrendChart({
   const dayCount = dayIndex(raw[raw.length - 1].date) - dayIndex(first) + 1;
   const byDate = new Map(raw.map((p) => [p.date, p.value]));
   const smoothedByDate = new Map(smoothed.map((p) => [p.date, p.value]));
+  // ラベルは先頭からではなく半周期ずらして打つ。index 0 に置くと、広げた
+  // ラベル幅の左半分がプロット領域の外にはみ出して「/20」のように切れる
   const labelEvery = Math.max(1, Math.ceil(dayCount / 4));
+  const labelOffset = Math.floor(labelEvery / 2);
+  const plotWidth = Math.max(0, width - Y_LABEL_WIDTH - Spacing.two);
+  const spacing = plotWidth / dayCount;
+
+  // ラベルはライブラリ既定のTextではなく labelComponent で描く。既定は
+  // numberOfLines=1 のため、Webでは max-width がコンテナ幅(=点間隔の数px)に
+  // クランプされて「7...」と省略される。幅を明示した自前Textなら制約を受けない。
+  // 負のマージンは、広げた幅の中心を点間隔の中心に合わせるため
+  const xLabel = (text: string) => {
+    function XAxisLabel() {
+      return (
+        <Text
+          style={{
+            width: X_LABEL_WIDTH,
+            marginLeft: -(X_LABEL_WIDTH - spacing) / 2,
+            textAlign: 'center',
+            color: theme.textMuted,
+            fontSize: 10,
+          }}>
+          {text}
+        </Text>
+      );
+    }
+    return XAxisLabel;
+  };
+
   const data = Array.from({ length: dayCount }, (_, i) => {
     const date = addDays(first, i);
     const value = byDate.get(date);
     return {
       value,
-      label: i % labelEvery === 0 ? formatMonthDay(date) : '',
+      labelComponent: i % labelEvery === labelOffset ? xLabel(formatMonthDay(date)) : undefined,
       date,
       gap: value === undefined,
     };
@@ -81,9 +112,6 @@ export function WeightTrendChart({
     const value = smoothedByDate.get(date);
     return { value, date, gap: value === undefined };
   });
-
-  const plotWidth = Math.max(0, width - Y_LABEL_WIDTH - Spacing.two);
-  const spacing = plotWidth / dayCount;
 
   return (
     <View onLayout={onLayout} style={styles.container}>
