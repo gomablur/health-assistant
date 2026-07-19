@@ -81,11 +81,13 @@ npm run build:web  # デモサイトを dist/ に出力(モックデータ)
 別ネットワークからつなぐときは `npm run start:tunnel`(expo-dev-client のランチャーで接続先を指定)
 
 コンテナからも `npm run start:tunnel` で実機につなげる(トンネル経由)。Metroが起動時に展開する
-React Native DevTools(Electron製)に必要な共有ライブラリは devcontainer.json、
-chrome-sandbox の setuid は `npm start` 直前に走る `scripts/devtools-sandbox.sh` で対応済み
-(DevTools は初回 start 時に遅延DLされるため、postCreate では直せない)。
+React Native DevTools(Electron製)に必要な共有ライブラリは devcontainer.json で導入済み。
+コンテナでは Chromium の SUID sandbox が構成不可能(展開パスにスペースが含まれ
+zygote 起動が壊れる)ため、`npm start` のラッパー `scripts/expo-start.sh` が
+`ELECTRON_DISABLE_SANDBOX=1` を設定して回避している(詳細は同スクリプトのコメント)。
 **`EXPO_UNSTABLE_HEADLESS=1` は使わないこと** — DevToolsのエラーは消えるが、
 QRコード表示やLAN IP探索まで止まる(自動化ツール向けモードのため)。
+なおコンテナには GUI が無いので DevTools のウィンドウ自体は開けない(Mac側で使う)。
 
 ## 規約
 
