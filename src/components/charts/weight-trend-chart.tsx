@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { DailyPoint } from '@/health/types';
 import { useTheme } from '@/hooks/use-theme';
-import { formatMonthDay } from '@/utils/date';
+import { addDays, dayIndex, formatMonthDay } from '@/utils/date';
 
 interface Props {
   raw: DailyPoint[];
@@ -34,9 +34,16 @@ export function WeightTrendChart({
   const theme = useTheme();
   const [width, setWidth] = useState(0);
 
+  // 空状態にも本体と同じ onLayout を付ける。React が両分岐の View を同一ノードとして
+  // 再利用するため、マウント時に onLayout が無いと react-native-web が ResizeObserver を
+  // 登録せず、後からチャート分岐に切り替わっても width が 0 のまま何も描画されない
+  // (Webで「読み込み中→チャート」と遷移する画面は必ずこの経路を通る)
+  const onLayout = (e: { nativeEvent: { layout: { width: number } } }) =>
+    setWidth(e.nativeEvent.layout.width);
+
   if (raw.length < 2) {
     return (
-      <View style={[styles.empty, { height }]}>
+      <View onLayout={onLayout} style={[styles.empty, { height }]}>
         <ThemedText type="small" themeColor="textMuted">
           データがまだありません
         </ThemedText>
@@ -50,19 +57,36 @@ export function WeightTrendChart({
   const yOffset = Math.floor(min - 0.6);
   const maxValue = Math.ceil(max + 0.6) - yOffset;
 
-  const labelEvery = Math.max(1, Math.ceil(raw.length / 4));
-  const data = raw.map((p, i) => ({
-    value: p.value,
-    label: i % labelEvery === 0 ? formatMonthDay(p.date) : '',
-    date: p.date,
-  }));
-  const data2 = smoothed.map((p) => ({ value: p.value, date: p.date }));
+  // 時間軸は暦日のリアルな軸: 未計測日もX方向の1日として確保する。
+  // 未計測日は value: undefined にすると gifted-charts が線形補間して線をつなぎ、
+  // データ点は自動で隠れる(interpolateMissingValues の既定動作)。
+  // gap フラグはツールチップで「計測なし」を出すための自前マーカー
+  const first = raw[0].date;
+  const dayCount = dayIndex(raw[raw.length - 1].date) - dayIndex(first) + 1;
+  const byDate = new Map(raw.map((p) => [p.date, p.value]));
+  const smoothedByDate = new Map(smoothed.map((p) => [p.date, p.value]));
+  const labelEvery = Math.max(1, Math.ceil(dayCount / 4));
+  const data = Array.from({ length: dayCount }, (_, i) => {
+    const date = addDays(first, i);
+    const value = byDate.get(date);
+    return {
+      value,
+      label: i % labelEvery === 0 ? formatMonthDay(date) : '',
+      date,
+      gap: value === undefined,
+    };
+  });
+  const data2 = Array.from({ length: dayCount }, (_, i) => {
+    const date = addDays(first, i);
+    const value = smoothedByDate.get(date);
+    return { value, date, gap: value === undefined };
+  });
 
   const plotWidth = Math.max(0, width - Y_LABEL_WIDTH - Spacing.two);
-  const spacing = raw.length > 1 ? plotWidth / raw.length : plotWidth;
+  const spacing = plotWidth / dayCount;
 
   return (
-    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={styles.container}>
+    <View onLayout={onLayout} style={styles.container}>
       {width > 0 && (
         <LineChart
           data={data}
@@ -101,7 +125,9 @@ export function WeightTrendChart({
             radius: 4,
             autoAdjustPointerLabelPosition: true,
             pointerLabelWidth: 130,
-            pointerLabelComponent: (items: { value: number; date?: string }[]) => (
+            // 指を離してもツールチップを消さない(別の場所をタップすれば移動する)
+            persistPointer: true,
+            pointerLabelComponent: (items: { value?: number; date?: string; gap?: boolean }[]) => (
               <View
                 style={[
                   styles.tooltip,
@@ -110,14 +136,23 @@ export function WeightTrendChart({
                 <ThemedText type="small" themeColor="textSecondary">
                   {items[0]?.date ? formatMonthDay(items[0].date) : ''}
                 </ThemedText>
-                <ThemedText type="smallBold">
-                  実測 {items[0]?.value?.toFixed(digits)} {unit}
-                </ThemedText>
-                {items[1] ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    平均 {items[1].value.toFixed(digits)} {unit}
+                {items[0]?.gap ? (
+                  // 未計測日: 補間された見かけの値を出さない
+                  <ThemedText type="smallBold" themeColor="textMuted">
+                    計測なし
                   </ThemedText>
-                ) : null}
+                ) : (
+                  <>
+                    <ThemedText type="smallBold">
+                      実測 {items[0]?.value?.toFixed(digits)} {unit}
+                    </ThemedText>
+                    {items[1]?.value != null && !items[1].gap ? (
+                      <ThemedText type="small" themeColor="textSecondary">
+                        平均 {items[1].value.toFixed(digits)} {unit}
+                      </ThemedText>
+                    ) : null}
+                  </>
+                )}
               </View>
             ),
           }}

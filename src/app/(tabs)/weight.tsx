@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { deriveFatMass, intakeGuide } from '@/analytics/body';
 import { assessPace, PACE_LABEL, stepsWeightLink, weightInsight } from '@/analytics/insights';
-import { movingAverage } from '@/analytics/stats';
+import { lastDays, MA_LEAD_DAYS, movingAverage } from '@/analytics/stats';
 import { Card, CardTitle } from '@/components/card';
 import { WeightTrendChart } from '@/components/charts/weight-trend-chart';
 import { NeedsWeight } from '@/components/needs-weight';
@@ -14,6 +14,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useHealthDaily } from '@/health/useHealthDaily';
 import { useTheme } from '@/hooks/use-theme';
+import { todayISO } from '@/utils/date';
 import { formatValue } from '@/utils/format';
 
 /**
@@ -54,13 +55,15 @@ export default function WeightScreen() {
   const [days, setDays] = useState<number>(90);
   const [comp, setComp] = useState<Composition>('weight');
 
-  const weight = useHealthDaily('weight', days);
-  const bodyFat = useHealthDaily('bodyFat', days);
+  // 体組成は移動平均の助走分(MA_LEAD_DAYS)だけ余分に取得する。
+  // ウィンドウ内だけで平均すると先頭6日の値が期間切り替えでズレる
+  const weight = useHealthDaily('weight', days + MA_LEAD_DAYS);
+  const bodyFat = useHealthDaily('bodyFat', days + MA_LEAD_DAYS);
   const steps = useHealthDaily('steps', days);
   const basal = useHealthDaily('basalEnergy', 7);
   const active = useHealthDaily('activeEnergy', 7);
 
-  const series =
+  const seriesWithLead =
     comp === 'weight'
       ? (weight.data ?? [])
       : comp === 'bodyFat'
@@ -68,13 +71,15 @@ export default function WeightScreen() {
         : deriveFatMass(weight.data ?? [], bodyFat.data ?? []);
 
   const meta = COMP_META[comp];
-  const smoothed = movingAverage(series, 7);
+  const end = todayISO();
+  const series = lastDays(seriesWithLead, days, end);
+  const smoothed = lastDays(movingAverage(seriesWithLead, 7), days, end);
   const insight = weightInsight(series);
   const pace =
     comp !== 'bodyFat' && insight.slopePerWeek != null ? assessPace(insight.slopePerWeek) : null;
   const link =
     comp === 'weight' && weight.data && steps.data && days >= 90
-      ? stepsWeightLink(weight.data, steps.data)
+      ? stepsWeightLink(lastDays(weight.data, days, end), steps.data)
       : null;
   const adherencePct = Math.round(insight.adherence28 * 100);
   const guide = intakeGuide(basal.data ?? [], active.data ?? []);

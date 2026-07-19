@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { assessPace, weightInsight, type Pace } from '@/analytics/insights';
-import { movingAverage } from '@/analytics/stats';
+import { lastDays, MA_LEAD_DAYS, movingAverage } from '@/analytics/stats';
 import { Card, CardTitle } from '@/components/card';
 import { WeightTrendChart } from '@/components/charts/weight-trend-chart';
 import { NeedsWeight } from '@/components/needs-weight';
@@ -140,14 +140,16 @@ export default function HomeScreen() {
   const [expandedKind, setExpandedKind] = useState<BriefKind | null>(null);
 
   // 30日ぶん取るのは、値の表示(直近の1点)だけでなく「そもそもこのメトリクスを
-  // 記録する機材を持っているか」を判定するため。1件もなければタイルごと隠す
-  const weight = useHealthDaily('weight', 30);
+  // 記録する機材を持っているか」を判定するため。1件もなければタイルごと隠す。
+  // 体重は7日移動平均の助走分を余分に取得し、表示は30日に切り出す
+  // (体重タブの30日表示と平均値を一致させるため)
+  const weight = useHealthDaily('weight', 30 + MA_LEAD_DAYS);
   const steps = useHealthDaily('steps', 30);
   const sleep = useHealthDaily('sleep', 30);
   const heart = useHealthDaily('restingHeartRate', 30);
 
-  const raw = weight.data ?? [];
-  const smoothed = movingAverage(raw, 7);
+  const raw = lastDays(weight.data ?? [], 30, todayISO());
+  const smoothed = lastDays(movingAverage(weight.data ?? [], 7), 30, todayISO());
   const insight = weightInsight(raw);
   const pace = insight.slopePerWeek != null ? assessPace(insight.slopePerWeek) : null;
   const visual = pace ? paceVisual(pace) : null;

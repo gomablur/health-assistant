@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
 
@@ -19,6 +19,30 @@ interface Props {
 }
 
 const Y_LABEL_WIDTH = 40;
+// ツールチップ(2行+余白)が棒の上に収まるのに必要な高さの見積もり。
+// 棒の上端からチャート上端までがこれより狭ければ、棒の内側に反転表示する
+const TOOLTIP_CLEARANCE = 64;
+
+/**
+ * ツールチップ本体。チャートは棒の上端のすぐ上に配置するため、棒が高いと
+ * チャート上端からはみ出して切れる。flip 時は自身の高さを測って棒の内側
+ * (上端のすぐ下)へずらす。高さが測れるまでは非表示にしてガタつきを防ぐ。
+ */
+function BarTooltip({ flip, children }: { flip: boolean; children: ReactNode }) {
+  const theme = useTheme();
+  const [h, setH] = useState(0);
+  return (
+    <View
+      onLayout={(e) => setH(e.nativeEvent.layout.height)}
+      style={[
+        styles.tooltip,
+        { backgroundColor: theme.surface, borderColor: theme.border },
+        flip && (h > 0 ? { transform: [{ translateY: h + Spacing.two }] } : { opacity: 0 }),
+      ]}>
+      {children}
+    </View>
+  );
+}
 
 /** 日次量のバーチャート: 角丸4pxのバー、タップ/ホバーでツールチップ。 */
 export function DailyBarChart({ points, days, color, unit, digits = 0, height = 160 }: Props) {
@@ -38,6 +62,10 @@ export function DailyBarChart({ points, days, color, unit, digits = 0, height = 
       date,
     };
   });
+  // gifted-charts が maxValue 未指定時に使う軸最大値(次の10の倍数への
+  // 切り上げ)を再現し、棒のピクセル高さの見積もりに使う
+  const dataMax = Math.max(...data.map((d) => d.value));
+  const chartMax = dataMax + (10 - (dataMax % 10));
 
   const plotWidth = Math.max(0, width - Y_LABEL_WIDTH - Spacing.two);
   // 隣接バー間は最低2pxの隙間、バー幅は最大24px
@@ -72,19 +100,18 @@ export function DailyBarChart({ points, days, color, unit, digits = 0, height = 
           disableScroll
           focusBarOnPress
           focusedBarConfig={{ color: theme.text }}
+          // 右端の棒はツールチップが右にはみ出すので左へ寄せる
+          leftShiftForLastIndexTooltip={48}
           renderTooltip={(item: { value: number; date?: string }) => (
-            <View
-              style={[
-                styles.tooltip,
-                { backgroundColor: theme.surface, borderColor: theme.border },
-              ]}>
+            <BarTooltip
+              flip={(item.value / chartMax) * height > height - TOOLTIP_CLEARANCE}>
               <ThemedText type="small" themeColor="textSecondary">
                 {item.date ? formatMonthDay(item.date) : ''}
               </ThemedText>
               <ThemedText type="smallBold">
                 {fmt(item.value)} {unit}
               </ThemedText>
-            </View>
+            </BarTooltip>
           )}
         />
       )}
